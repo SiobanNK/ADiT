@@ -1,0 +1,24 @@
+_target_: adit.data.protein_datamodule.ProteinDataModule
+
+dataset:
+  _target_: adit.data.components.dataset.AditPDBDataset
+  path_to_dataset: ${paths.new_pdb_data_path}
+  # path_to_esm_repr: ${paths.pdb_esm_path}
+  metadata_filter: 
+    _target_: adit.data.components.metadata_filter.AditMetadataFilter
+    min_len: 40
+  transform: 
+    _target_: adit.data.components.feature_transform.AditDataFeatureTransform
+    unit: nm
+    truncate_length: 250
+    strip_missing_residues: true
+    recenter_and_scale: true
+    eps: 1e-8
+    pretrain: true
+
+batch_size: 4 # 16 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+generator_seed: 42
+train_val_split: [0.95, 0.05]
+num_workers: 8
+pin_memory: false
+shuffle: true

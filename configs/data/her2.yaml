@@ -1,0 +1,24 @@
+_target_: adit.data.protein_datamodule.ProteinDataModule
+
+dataset:
+  _target_: adit.data.components.dataset.HER2Dataset
+  path_to_dataset: ${paths.her2_path}
+  path_to_esm_repr: ${paths.her2_esm_repr_path}
+  transform: 
+    _target_: adit.data.components.feature_transform.FeatureTransform
+    unit: nm
+    truncate_length: 1000
+    strip_missing_residues: true
+    recenter_and_scale: true
+    eps: 1e-8
+    pretrain: false
+    label_name: null
+  skempi_truncate: true
+  truncation_size: 50
+  consecutive: false
+batch_size: 8 # 16 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+generator_seed: 42
+train_val_split: [0.95, 0.05]
+num_workers: 8
+pin_memory: false
+shuffle: true

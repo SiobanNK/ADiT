@@ -1,0 +1,54 @@
+_target_: adit.models.downstream_module.LBAModule
+
+net:
+  _target_: adit.models.net.adit.model.ADiT
+  token_dim: 384
+  token_pair_dim: 16
+  atom_dim: 128
+  atom_pair_dim: 16
+  N_block_atom: 3
+  N_head_atom: 4
+  N_block_token: 5
+  N_head_token: 4
+  N_query: 32
+  N_key: 128
+  dropout: 0.0
+  esm_weight_path: ckpts
+  esm_model: ESM-2-650M
+
+mlp:
+  _target_: adit.models.net.mlp.MLP4downstream
+  input_dim: 128
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 1e-4
+  weight_decay: 0.00
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: "min"
+  factor: 0.1
+  patience: 10
+
+scheduler_monitor: "val/mse_loss"
+
+loss: 
+  _target_: adit.models.loss.MseLoss
+
+metrics:
+  _target_: adit.models.downstream_module.Metrics
+  metrics: 
+    - mse_loss
+    - spearmanr
+    - pearsonr
+  metrics_test:
+    - mse_loss
+    - spearmanr
+    - pearsonr
+  
+compile: false
+
+save_file: ./lba_test_save.pkl

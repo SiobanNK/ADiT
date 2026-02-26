@@ -1,0 +1,63 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /callbacks: default
+  - override /data: davis
+  - override /model: davis
+  - override /trainer: ddp
+  
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+callbacks:
+  model_checkpoint:
+    save_top_k: 3
+    every_n_epochs: 1
+    save_last: true
+    monitor: "val/mse_loss"
+    mode: "min"
+  early_stopping:
+    monitor: "val/mse_loss"
+    mode: "min"
+
+data:
+  batch_size: 4
+  dataset:
+    transform: 
+      pretrain: false
+
+model:
+  optimizer:
+    lr: 3e-5
+  net:
+    token_dim: 768
+    token_pair_dim: 128
+    atom_dim: 128
+    atom_pair_dim: 16
+    N_block_atom: 3
+    N_head_atom: 4
+    N_block_token: 24
+    N_head_token: 16
+    N_query: 32
+    N_key: 128
+    dropout: 0.2
+    remove_protein_ligand_edge: True
+  mlp:
+    input_dim: 128
+
+trainer:
+  min_epochs: 50
+  max_epochs: 120
+  devices: 4
+
+tags: ["dev"]
+
+task_name: "davis_L"
+
+seed: 42
+
+ckpt_path: null

@@ -1,0 +1,45 @@
+_target_: adit.models.pretrain_module.DenoisingModule
+
+net:
+  _target_: adit.models.net.adit.model.ADiT
+  token_dim: 384
+  token_pair_dim: 64
+  atom_dim: 128
+  atom_pair_dim: 16
+  N_block_atom: 8
+  N_head_atom: 8
+  N_block_token: 12
+  N_head_token: 8
+  N_query: 32
+  N_key: 128
+  dropout: 0.0
+  esm_weight_path: ckpts
+  esm_model: ESM-2-650M
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 1e-4
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+scheduler_monitor: "val/loss"
+
+noise_model:
+  _target_: adit.models.task.noiser.StructureNoiser
+  P_mean: 0.05
+  P_std: 0.0
+
+loss: null # Ignore this part now
+
+compile: false
+
+loss_type: gaussian
+
+output_param: v

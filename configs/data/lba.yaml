@@ -1,0 +1,22 @@
+_target_: adit.data.protein_datamodule.ProteinDataModule
+
+dataset:
+  _target_: adit.data.components.dataset.LBADataset
+  path_to_dataset: ${paths.lba_path}
+  transform: 
+    _target_: adit.data.components.feature_transform.LBAFeatureTransform
+    unit: nm
+    truncate_length: 500
+    strip_missing_residues: true
+    recenter_and_scale: true
+    eps: 1e-8
+    pretrain: false
+    label_name: neglog_aff
+  split_identity_threshold: identity_30 # identity_60
+
+batch_size: 4 # 16 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+generator_seed: 42
+train_val_split: [0.95, 0.05]
+num_workers: 8
+pin_memory: false
+shuffle: true
