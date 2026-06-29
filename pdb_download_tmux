@@ -1,0 +1,14 @@
+# Start a named session
+tmux new -s pdb_download
+
+# Then launch the script
+./download_pdb_mmcif.sh /data/pdb_mmcif
+
+# Detach
+Ctrl+B  then  D
+
+# Reattach later
+tmux attach -t pdb_download
+
+# List sessions
+tmux ls
