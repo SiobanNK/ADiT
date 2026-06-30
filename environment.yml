@@ -112,7 +112,6 @@ dependencies:
       - py-cpuinfo==9.0.0
       - pydantic==2.13.4
       - pydantic-core==2.46.4
-      - pyg-lib==0.4.0+pt21cu121
       - pygments==2.20.0
       - pyparsing==3.3.2
       - pyrr==0.10.3
@@ -137,10 +136,6 @@ dependencies:
       - tensorboard-data-server==0.7.2
       - threadpoolctl==3.6.0
       - torch==2.1.2+cu121
-      - torch-cluster==1.6.3+pt21cu121
-      - torch-scatter==2.1.2+pt21cu121
-      - torch-sparse==0.6.18+pt21cu121
-      - torch-spline-conv==1.2.2+pt21cu121
       - torchaudio==2.1.2+cu121
       - torchdrug==0.2.1
       - torcheval==0.0.7
