@@ -18,7 +18,14 @@
 
 
 RUN_DIR="$SCRATCH/ADiT"
-RUN_SCRIPT="./scripts/dump_esm_repr.py"
+RUN_SCRIPT="./adit/train.py"
+SPLIT=2
+DATA="skempi"
+ADIT_SIZE="S"
+
+# Protein - Ligand : "lba"
+# Drug - Target : "davis"
+# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -41,3 +48,7 @@ cd "$RUN_DIR"
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT"
+    experiment=${DATA}_$ADIT_SIZE \
+    ++data.dataset.test_split=split_$SPLIT \
+    task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
+    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt
