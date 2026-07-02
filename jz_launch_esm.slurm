@@ -36,7 +36,11 @@ echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
 module purge
+module load arch/h100
 source $WORK/envs/adit/bin/activate
+echo "python: $(which python)"
+srun which python
+srun python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 
 # ---- Run it...
 cd "$RUN_DIR"

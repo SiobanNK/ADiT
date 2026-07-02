@@ -4,7 +4,6 @@
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
-#SBATCH --account=hhy@h100   # echo $IDRPROJ
 
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
@@ -44,9 +43,7 @@ echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
 module purge
-module load python/3.10.4 cuda/12.4.0 cudnn/8.9.7.29-cuda
 source $SCRATCH/envs/adit/bin/activate
-
 # ---- Run it...
 cd "$RUN_DIR"
 echo 'Launching script'
