@@ -12,15 +12,20 @@
 #   bash install_adit_jean_zay.sh
 # ============================================================
 
+export PIP_CACHE_DIR=$WORK/.cache/pip
+export TMPDIR=$WORK/.tmp
+mkdir -p $PIP_CACHE_DIR $TMPDIR
+
+
 set -e
 
 # ------------------------------------------------------------
 # 0. Configuration — edit these if needed
 # ------------------------------------------------------------
 ENV_DIR="$WORK/envs/adit"          # where the venv will live
-TORCH_VERSION="2.1.2"
-CUDA_VERSION="cu121"                # matches Jean-Zay's CUDA 12.1
-PYTHON_VERSION="3.10"               # Python 3.10 recommended
+TORCH_VERSION="2.5.2"
+CUDA_VERSION="cu124"
+PYTHON_VERSION="3.10.4"               # Python 3.10 recommended
 
 # ------------------------------------------------------------
 # 1. Load Jean-Zay modules
@@ -29,7 +34,7 @@ PYTHON_VERSION="3.10"               # Python 3.10 recommended
 # ------------------------------------------------------------
 module purge
 module load python/3.10.4          # adjust version if needed
-module load cuda/12.1.0            # CUDA 12.1
+module load cuda/12.4.0            # CUDA 12.1
 module load cudnn/8.9.7.29-cuda    # cuDNN for CUDA 12.x
 
 echo ">>> Modules loaded"
@@ -54,10 +59,10 @@ pip install --upgrade pip
 # ------------------------------------------------------------
 echo ">>> Installing PyTorch ${TORCH_VERSION} with CUDA ${CUDA_VERSION}..."
 pip install \
-    torch==2.1.2 \
-    torchvision==0.16.2 \
-    torchaudio==2.1.2 \
-    --index-url https://download.pytorch.org/whl/cu121
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    torchaudio==2.5.1 \
+    --index-url https://download.pytorch.org/whl/cu124
 
 # ------------------------------------------------------------
 # 4. Install PyG (torch_scatter, torch_cluster, torch_sparse …)
@@ -67,7 +72,7 @@ pip install \
 # ------------------------------------------------------------
 echo ">>> Downloading PyG wheels..."
 WHL_DIR=$(mktemp -d)
-BASE_URL="https://data.pyg.org/whl/torch-2.1.0%2Bcu121"
+BASE_URL="https://data.pyg.org/whl/torch-2.5.1%2Bcu124"
 
 wget -q -P "$WHL_DIR" "${BASE_URL}/pyg_lib-0.4.0%2Bpt21cu121-cp310-cp310-linux_x86_64.whl"
 wget -q -P "$WHL_DIR" "${BASE_URL}/torch_scatter-2.1.2%2Bpt21cu121-cp310-cp310-linux_x86_64.whl"
