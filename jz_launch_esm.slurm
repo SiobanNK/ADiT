@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=skempi_metric
+#SBATCH --job-name=esm
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mail-type=END                 # Send email at job completion
@@ -37,13 +37,15 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-source $WORK/envs/adit/bin/activate
-echo "python: $(which python)"
-srun which python
-srun python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+VENV="$WORK/envs/adit"
+# source $WORK/envs/adit/bin/activate
+# echo "python: $(which python)"
+# srun which python
+# srun python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 
 # ---- Run it...
 cd "$RUN_DIR"
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT"
+srun bash -c "source $VENV/bin/activate && which python && python $RUN_SCRIPT"
+# srun python "$RUN_SCRIPT"
