@@ -9,8 +9,6 @@
 #SBATCH -C h100
 #SBATCH --partition=gpu_p6    # prepost, visu, compil, archive
 #SBATCH --nodes=1
-##SBATCH --cpus-per-task=1
-#SBATCH --mem=15G
 #SBATCH --time=02:00:00
 #SBATCH --gres=gpu:H100:1
 ## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
