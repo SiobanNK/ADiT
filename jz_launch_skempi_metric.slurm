@@ -10,13 +10,20 @@
 #SBATCH --partition=gpu_p6    # prepost, visu, compil, archive
 #SBATCH --nodes=1
 #SBATCH --time=02:00:00
-#SBATCH --gres=gpu:H100:1
+#SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
 ## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 
 RUN_DIR="$SCRATCH/ADiT"
-RUN_SCRIPT="./scripts/dump_esm_repr.py"
+RUN_SCRIPT="./adit/train.py"
+SPLIT=2
+DATA="skempi"
+ADIT_SIZE="S"
+
+# Protein - Ligand : "lba"
+# Drug - Target : "davis"
+# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -39,3 +46,7 @@ cd "$RUN_DIR"
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT"
+    experiment=${DATA}_$ADIT_SIZE \
+    ++data.dataset.test_split=split_$SPLIT \
+    task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
+    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt
