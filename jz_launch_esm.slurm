@@ -4,10 +4,11 @@
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
-#SBATCH --account=hhy@h100   # echo $IDRPROJ
 
 #SBATCH -C h100
 #SBATCH --partition=gpu_p6    # prepost, visu, compil, archive
+#SBATCH --account=hhy@h100   # echo $IDRPROJ
+
 #SBATCH --nodes=1
 #SBATCH --time=02:00:00
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
