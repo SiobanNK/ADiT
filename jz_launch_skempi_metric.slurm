@@ -53,7 +53,7 @@ conda activate $WORK/envs/adit
 cd "$RUN_DIR"
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT"
+srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data.dataset.test_split=split_$SPLIT \
     task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
