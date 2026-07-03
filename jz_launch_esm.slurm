@@ -37,7 +37,7 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-module load pytorch-gpu/py3/2.5.0
+# module load pytorch-gpu/py3/2.5.0
 # VENV="$WORK/envs/adit"
 # source $WORK/envs/adit/bin/activate
 # echo "python: $(which python)"
@@ -46,6 +46,10 @@ module load pytorch-gpu/py3/2.5.0
 # echo "WORK var: $WORK"
 # echo "VENV var: $VENV"
 # ls -la "$VENV/bin/activate"
+
+module load miniforge/25.9.1
+conda deactivate
+conda activate $WORK/envs/adit
 
 # ---- Run it...
 cd "$RUN_DIR"
