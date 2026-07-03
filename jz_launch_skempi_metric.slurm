@@ -46,7 +46,8 @@ module purge
 module load arch/h100
 # module load pytorch-gpu/py3/2.5.0
 # source $SCRATCH/envs/adit/bin/activate
-# conda activate adit
+module load miniforge/25.9.1
+conda deactivate
 conda activate $WORK/envs/adit
 # ---- Run it...
 cd "$RUN_DIR"
