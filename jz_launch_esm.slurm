@@ -52,4 +52,4 @@ cd "$RUN_DIR"
 echo 'Launching script'
 
 # srun bash -c "source $VENV/bin/activate && python $RUN_SCRIPT"
-srun python "$RUN_SCRIPT"
+srun python "$RUN_SCRIPT" # useless?: --config-name=reference

@@ -43,7 +43,10 @@ echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
 module purge
-source $SCRATCH/envs/adit/bin/activate
+module load arch/h100
+module load pytorch-gpu/py3/2.5.0
+# source $SCRATCH/envs/adit/bin/activate
+# conda activate adit
 # ---- Run it...
 cd "$RUN_DIR"
 echo 'Launching script'
