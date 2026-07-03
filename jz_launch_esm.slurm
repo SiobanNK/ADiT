@@ -37,18 +37,19 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-VENV="$WORK/envs/adit"
+module load pytorch-gpu/py3/2.5.0
+# VENV="$WORK/envs/adit"
 # source $WORK/envs/adit/bin/activate
 # echo "python: $(which python)"
 # srun which python
 # srun python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-echo "WORK var: $WORK"
-echo "VENV var: $VENV"
-ls -la "$VENV/bin/activate"
+# echo "WORK var: $WORK"
+# echo "VENV var: $VENV"
+# ls -la "$VENV/bin/activate"
 
 # ---- Run it...
 cd "$RUN_DIR"
 echo 'Launching script'
 
-srun bash -c "echo INSIDE SRUN; echo VENV=$VENV; source $VENV/bin/activate; echo VIRTUAL_ENV=\$VIRTUAL_ENV; echo PATH after activate: \$PATH; which python"
-# srun python "$RUN_SCRIPT"
+# srun bash -c "source $VENV/bin/activate && python $RUN_SCRIPT"
+srun python "$RUN_SCRIPT"
