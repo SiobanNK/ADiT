@@ -22,7 +22,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-SPLIT=2
+SPLIT=0
 DATA="skempi"
 ADIT_SIZE="S"
 
@@ -54,6 +54,6 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT"
     experiment=${DATA}_$ADIT_SIZE \
-    ++data.dataset.test_split=split_$SPLIT \
+    data.dataset.test_split=split_$SPLIT \
     task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt
