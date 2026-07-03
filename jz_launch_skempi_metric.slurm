@@ -44,9 +44,10 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-module load pytorch-gpu/py3/2.5.0
+# module load pytorch-gpu/py3/2.5.0
 # source $SCRATCH/envs/adit/bin/activate
 # conda activate adit
+conda activate $WORK/envs/adit
 # ---- Run it...
 cd "$RUN_DIR"
 echo 'Launching script'
