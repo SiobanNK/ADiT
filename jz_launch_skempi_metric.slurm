@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=skempi_metric
-#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err
+#SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j_%a.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --array=0-2
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -20,9 +21,10 @@
 
 
 
+
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-SPLIT=0
+SPLIT="$SLURM_ARRAY_TASK_ID"
 DATA="skempi"
 ADIT_SIZE="S"
 
@@ -51,6 +53,7 @@ conda deactivate
 conda activate $WORK/envs/adit
 # ---- Run it...
 cd "$RUN_DIR"
+set -x
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
