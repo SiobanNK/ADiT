@@ -17,14 +17,18 @@ class RelativePositionEncoding(nn.Module):
         self.layer_norm = nn.LayerNorm((2 * self.r_max + 2) + (2 * self.s_max + 2))
         self.activation = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
-    
+
     def forward(self, token_idx, token2chain, edge_token):
-        same_chain = token2chain[edge_token[0]] == token2chain[edge_token[1]]
+        # token_mask = batch["seq_mask"].bool()
+        # token_edges_matrix, edge_token = generate_dense_attention_edge_batch(num_tokens)
+        # token2chain = batch["chain_index"][token_mask],
+        # token_idx = batch["token_idx"][token_mask]
+        same_chain = token2chain[edge_token[0]] == token2chain[edge_token[1]]       # c'est quoi token2chain ? matrice ? et edge_token ?
 
         d_ij_token = torch.where(
-            same_chain,
-            torch.clamp(token_idx[edge_token[0]] - token_idx[edge_token[1]] + self.r_max, 0, 2 * self.r_max),
-            (2 * self.r_max + 1) * torch.ones_like(same_chain, device=token_idx.device, dtype=torch.long)
+            same_chain, # condition
+            torch.clamp(token_idx[edge_token[0]] - token_idx[edge_token[1]] + self.r_max, 0, 2 * self.r_max),   # input. pourquoi clamp ?
+            (2 * self.r_max + 1) * torch.ones_like(same_chain, device=token_idx.device, dtype=torch.long)       # other if condition not met
         )
         a_ij_rel_token = create_one_hot_encoding(d_ij_token, 2 * self.r_max + 2)
 
