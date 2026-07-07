@@ -3,31 +3,19 @@
 # default debugging setup, runs 1 full epoch
 # other debugging configs can inherit from this one
 
+defaults:
+  - override /callbacks: null
+  - override /data: skempi
+  - override /model: skempi
+  - override /trainer: ddp
+  - override /logger: null
+
 # overwrite task name so debugging logs are stored in separate folder
 task_name: "debug_onehot"
 
-# disable callbacks and loggers during debugging
-callbacks: null
-logger: null
-
 model:
-  optimizer:
-    lr: 1e-4
   net:
-    token_dim: 384
-    token_pair_dim: 32
-    atom_dim: 128
-    atom_pair_dim: 16
-    N_block_atom: 3
-    N_head_atom: 4
-    N_block_token: 3
-    N_head_token: 8
-    N_query: 32
-    N_key: 128
-    dropout: 0.0
     token_coord_encoder: onehot
-  mlp:
-    input_dim: 256
 
 extras:
   ignore_warnings: False
