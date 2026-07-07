@@ -1,8 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=skempi_metric
+#SBATCH --job-name=her2
 #SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j_%a.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0-2
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -20,17 +19,16 @@
 ## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
+# Protein - Ligand : "lba"
+# Drug - Target : "davis"
+# Protein - Protein : "skempi"
+# Antibody-Antigen : "her2"
 
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-SPLIT="$SLURM_ARRAY_TASK_ID"
-DATA="skempi"
+DATA="$j"
 ADIT_SIZE="S"
-
-# Protein - Ligand : "lba"
-# Drug - Target : "davis"
-# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -46,9 +44,8 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-# module load pytorch-gpu/py3/2.5.0
 # source $SCRATCH/envs/adit/bin/activate
-module load miniforge/25.9.1
+source ~/.bashrc
 conda deactivate
 conda activate $WORK/envs/adit
 # ---- Run it...
@@ -58,7 +55,9 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
-    data.dataset.test_split=split_$SPLIT \
-    task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
+    data=$DATA \
+    ++trainer.devices=1 \
+    ++data.batch_size=1 \
+    ++model.save_file=result_%j_L.pkl \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=wandb
