@@ -1,0 +1,63 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /callbacks: default
+  - override /data: skempi
+  - override /model: skempi
+  - override /trainer: ddp
+
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+callbacks:
+  model_checkpoint:
+    save_top_k: 0
+    every_n_epochs: 1
+    save_last: true
+    monitor: "val/mse_loss"
+    mode: "min"
+  early_stopping:
+    monitor: "val/mse_loss"
+    mode: "min"
+
+data:
+  batch_size: 8
+  dataset:
+    transform:
+      pretrain: true
+
+model:
+  optimizer:
+    lr: 1e-4
+  net:
+    token_dim: 384
+    token_pair_dim: 32
+    atom_dim: 128
+    atom_pair_dim: 16
+    N_block_atom: 3
+    N_head_atom: 4
+    N_block_token: 3
+    N_head_token: 8
+    N_query: 32
+    N_key: 128
+    dropout: 0.0
+    token_coord_encoder: onehot
+  mlp:
+    input_dim: 256
+
+trainer:
+  min_epochs: 60
+  max_epochs: 60
+  devices: 1
+
+tags: ["dev"]
+
+task_name: "skempi_S_coord_encoder"
+
+seed: 42
+
+ckpt_path: null

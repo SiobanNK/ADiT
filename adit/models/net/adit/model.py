@@ -19,6 +19,7 @@ class ADiT(nn.Module):
         N_query = 32, N_key = 128, dropout = 0.0,
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
+        token_coord_encoder = None
     ):
         super(ADiT, self).__init__()
         # basic
@@ -34,7 +35,7 @@ class ADiT(nn.Module):
 
         # modules
         self.seq_embedder = SeqEmbedder(self.token_dim, dropout = dropout, esm_weight_path = esm_weight_path, esm_model = esm_model)
-        self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout)
+        self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout, token_coord_encoder=token_coord_encoder)
         self.simple_pair_former = SimplePairFormer(token_dim, token_pair_dim)
         self.diffusion_module = DiffusionModule(
             atom_dim, atom_pair_dim, token_dim, token_pair_dim,
