@@ -1,8 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=debug
-#SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j_%a.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0-2
+#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -24,13 +23,6 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-SPLIT="$SLURM_ARRAY_TASK_ID"
-DATA="skempi"
-ADIT_SIZE="S"
-
-# Protein - Ligand : "lba"
-# Drug - Target : "davis"
-# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
