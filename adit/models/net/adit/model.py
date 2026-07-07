@@ -11,12 +11,12 @@ from adit.models.net.adit.utils import generate_sparse_attention_edge_batch, gen
 
 
 class ADiT(nn.Module):
-    
+
     def __init__(
-        self, 
+        self,
         token_dim, token_pair_dim, atom_dim, atom_pair_dim, # some hidden dim and final output dim
         N_block_atom, N_head_atom, N_block_token, N_head_token, # for diffusion transformer
-        N_query = 32, N_key = 128, dropout = 0.0, 
+        N_query = 32, N_key = 128, dropout = 0.0,
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
     ):
@@ -37,7 +37,7 @@ class ADiT(nn.Module):
         self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout)
         self.simple_pair_former = SimplePairFormer(token_dim, token_pair_dim)
         self.diffusion_module = DiffusionModule(
-            atom_dim, atom_pair_dim, token_dim, token_pair_dim, 
+            atom_dim, atom_pair_dim, token_dim, token_pair_dim,
             N_block_atom, N_head_atom, N_block_token, N_head_token
         )
 
@@ -70,13 +70,13 @@ class ADiT(nn.Module):
         # relative position encoding: token2chain, token_idx
         token_idx = batch["token_idx"][token_mask]
         token2chain = batch["chain_index"][token_mask]
-        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges)
+        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges, )
 
         # token pair repr
         token_feat, token_pair_feat = self.simple_pair_former(
             token_feat, token_edges, relative_position_embedding
         )
-        
+
         # diffusion module
         atom_mask = batch["atom_mask"].bool()
         atom_name = torch.arange(residue_constants.atom_type_num, device=device)[None, None, :].expand_as(batch["atom_mask"])
@@ -90,20 +90,20 @@ class ADiT(nn.Module):
 
         out_atom_feat = self.diffusion_module(
             token_feat, token_pair_feat,
-            atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms, 
+            atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms,
             atom_edges, token_edges, token_edges_matrix
         )
         batch["atom_feat"] = out_atom_feat
-        
+
         out_token_feat = scatter_mean(
-            out_atom_feat, 
+            out_atom_feat,
             atom2token, dim=0, dim_size=num_tokens.sum()
         )
         batch["token_feat"] = out_token_feat
 
         token2complex = torch.arange(batch_size, device=device).repeat_interleave(num_tokens)
         out_complex_feat = scatter_sum(
-            out_token_feat, 
+            out_token_feat,
             token2complex, dim=0, dim_size=batch_size
         )
         batch["complex_feat"] = out_complex_feat
