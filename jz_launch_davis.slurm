@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=davis
-#SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j_%a.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -9,7 +9,7 @@
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
