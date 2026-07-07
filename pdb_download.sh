@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # --- Configuration ---
-DEST_DIR="${1:-/data/pdb_mmcif}"        # Override with: ./script.sh /your/path
+DEST_DIR="${SCRATCH}/ADiT/dataset/adit_pretrain_data"        # Override with: ./script.sh /your/path
 RSYNC_SERVER="rsync.rcsb.org::ftp_data/structures/divided/mmCIF/"
 LOG_FILE="${DEST_DIR}/download.log"
 N_RETRIES=5
@@ -44,13 +44,6 @@ mkdir -p "${DEST_DIR}"
 echo -e "${YELLOW}Note:${NC} Full PDB mmCIF archive is ~700GB compressed."
 echo -e "      Make sure you have sufficient disk space."
 echo ""
-
-# --- Confirm ---
-read -rp "Proceed with download? [y/N] " confirm
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-  echo "Aborted."
-  exit 0
-fi
 
 echo ""
 echo -e "${GREEN}Starting rsync...${NC}"

@@ -60,4 +60,5 @@ srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data.dataset.test_split=split_$SPLIT \
     task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
-    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt
+    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
+    logger=wandb
