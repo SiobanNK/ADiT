@@ -8,7 +8,7 @@
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=2
 #SBATCH --gres=gpu:2
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
@@ -56,7 +56,7 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
-    ++trainer.devices=2 \
+    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++data.batch_size=16 \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \

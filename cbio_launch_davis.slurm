@@ -1,28 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=her2
+#SBATCH --job-name=davis
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --error=./logs/%x_%j.err
+#SBATCH --mem=15G
+#SBATCH --time=01:00:00
+#SBATCH --partition=cbio-gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:P100:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+##SBATCH --cpus-per-task=1
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
-
-#SBATCH --account=hhy@h100      # echo $IDRPROJ
-#SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
-# Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
-# qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
-# des CPU du noeud pour la seule tache :
-#SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
-#SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=20:00:00
-## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
-
-
-# Protein - Ligand : "lba"
-# Drug - Target : "davis"
-# Protein - Protein : "skempi"
-# Antibody-Antigen : "her2"
 
 
 RUN_DIR="$SCRATCH/ADiT"
@@ -56,8 +44,10 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data=$DATA \
-    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
-    ++data.batch_size=1 \
-    ++model.save_file=result_%j_L.pkl \
+    ++trainer.devices=2 \
+    ++data.batch_size=8 \
+    ++data.dataset.split_seed=seed_1 \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=wandb
+
+# trainer.devices : S : 2, M : 4, L : 4
