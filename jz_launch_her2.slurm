@@ -22,12 +22,14 @@
 # Protein - Ligand : "lba"
 # Drug - Target : "davis"
 # Protein - Protein : "skempi"
-# Antibody-Antigen : "her2"
+# Antibody-Antigen : "her2" (test only)
 
 
 RUN_DIR="$SCRATCH/ADiT"
-RUN_SCRIPT="./adit/train.py"
+RUN_SCRIPT="./adit/test.py"
 DATA="$SLURM_JOB_NAME"
+FINETUNING_DATE="2026-07-07"
+FINETUNING="skempi_S_split_0_10-34-52"
 ADIT_SIZE="S"
 
 # ---- Welcome...
@@ -59,5 +61,5 @@ srun python "$RUN_SCRIPT" \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++data.batch_size=1 \
     ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
-    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
+    ckpt_path=outputs/${FINETUNING_DATE}/${FINETUNING}/checkpoints/last.ckpt \
     logger=many_loggers
