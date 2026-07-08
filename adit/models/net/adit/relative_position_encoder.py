@@ -22,9 +22,9 @@ def compute_token_coordinates(atom_coordinates, atom2token):
 
 class RelativePositionEncoding(nn.Module):
 
-    def __init__(self, token_pair_dim, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None):
+    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None):
         super(RelativePositionEncoding, self).__init__()
-        self.q_max = 2 * r_max if token_coord_encoder else -1
+        self.q_max = q_max if token_coord_encoder else -1
         self.r_max = r_max
         self.s_max = s_max
         self.token_pair_dim = token_pair_dim
@@ -70,7 +70,10 @@ class RelativePositionEncoding(nn.Module):
                 a_ij_rel_3d = self.rbf(dist, d_max, device=token_idx.device)
 
             else:
-                raise Exception("Valid token coordinates encoder: 'onehot' and 'rbf'. Your token_coord_encoder: " + self.token_coord_encoder)
+                raise ValueError(
+                        f"Valid token_coord_encoder values are 'onehot' or 'rbf'. "
+                        f"Got: {self.token_coord_encoder!r} (type: {type(self.token_coord_encoder).__name__})"
+                    )
 
         d_ij_token = torch.where(   # signed, symmetric relative distance as a non-negative bucket index for one-hot encoding
             same_chain, # condition
