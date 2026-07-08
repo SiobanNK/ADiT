@@ -60,6 +60,6 @@ srun python "$RUN_SCRIPT" \
     ++data.batch_size=16 \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
-    logger=wandb
+    logger=many_loggers
 
 # trainer.devices : S : 2, M : 4, L : 4

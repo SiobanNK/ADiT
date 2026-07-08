@@ -58,6 +58,6 @@ srun python "$RUN_SCRIPT" \
     data=$DATA \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++data.batch_size=1 \
-    ++model.save_file=result_%j_L.pkl \
+    ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
-    logger=wandb
+    logger=many_loggers
