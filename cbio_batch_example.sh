@@ -33,4 +33,4 @@ cd "$RUN_DIR"
 echo 'Launching script'
 srun python "$RUN_SCRIPT" --config-name=reference # dump_esm_repr.py drugbank_v5.1.5 S0h --non_balanced --job_id $SLURM_JOB_ID
 
-# Write in the cluser, in the same folder as the py file : sbatch batch_example.sh
+# Write in the cluster, in the same folder as the py file : sbatch batch_example.sh
