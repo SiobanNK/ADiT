@@ -15,7 +15,7 @@ task_name: "debug_onehot"
 
 model:
   net:
-    token_coord_encoder: onehot
+    token_coord_encoder: null
 
 extras:
   ignore_warnings: False
@@ -45,3 +45,6 @@ trainer:
 data:
   num_workers: 0 # debuggers don't like multiprocessing
   pin_memory: False # disable gpu memory pin
+
+
+seed: 42

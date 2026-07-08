@@ -68,17 +68,6 @@ class ADiT(nn.Module):
             batch["seq_mask"], batch["token_type"], batch["aatype"], batch["chain_index"], batch.get("esm_repr")
         )
 
-        # relative position encoding: token2chain, token_idx
-        token_idx = batch["token_idx"][token_mask]
-        token2chain = batch["chain_index"][token_mask]
-        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges, )
-
-        # token pair repr
-        token_feat, token_pair_feat = self.simple_pair_former(
-            token_feat, token_edges, relative_position_embedding
-        )
-
-        # diffusion module
         atom_mask = batch["atom_mask"].bool()
         atom_name = torch.arange(residue_constants.atom_type_num, device=device)[None, None, :].expand_as(batch["atom_mask"])
         atom_name = atom_name[atom_mask]
@@ -89,6 +78,17 @@ class ADiT(nn.Module):
         num_atoms = batch["atom_mask"].sum(-1)[token_mask].int()
         atom2token = torch.arange(num_tokens.sum(), device=device).repeat_interleave(num_atoms)
 
+        # relative position encoding: token2chain, token_idx
+        token_idx = batch["token_idx"][token_mask]
+        token2chain = batch["chain_index"][token_mask]
+        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges, atom_coordinates, atom2token)
+
+        # token pair repr
+        token_feat, token_pair_feat = self.simple_pair_former(
+            token_feat, token_edges, relative_position_embedding
+        )
+
+        # diffusion module
         out_atom_feat = self.diffusion_module(
             token_feat, token_pair_feat,
             atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms,

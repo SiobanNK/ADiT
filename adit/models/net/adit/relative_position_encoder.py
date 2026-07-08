@@ -24,7 +24,7 @@ class RelativePositionEncoding(nn.Module):
 
     def __init__(self, token_pair_dim, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None):
         super(RelativePositionEncoding, self).__init__()
-        self.q_max = 2 * r_max
+        self.q_max = 2 * r_max if token_coord_encoder else -1
         self.r_max = r_max
         self.s_max = s_max
         self.token_pair_dim = token_pair_dim
@@ -62,15 +62,15 @@ class RelativePositionEncoding(nn.Module):
             dist = ((token_coordinates[edge_token[0]] - token_coordinates[edge_token[1]]) ** 2).sum(dim=-1).sqrt()
             d_max = 50  # angstrom
 
-            if self.token_coord_encoder == "one_hot" :
+            if self.token_coord_encoder == "onehot" :
                 d_ij_3d = torch.clamp(dist.floor().long(), 0, d_max)   # distances entre tous les tokens, même de chaînes différentes.
                 a_ij_rel_3d = create_one_hot_encoding(d_ij_3d, self.q_max + 1)
 
             elif self.token_coord_encoder == "rbf" :
                 a_ij_rel_3d = self.rbf(dist, d_max, device=token_idx.device)
 
-        else : # default
-            a_ij_rel_3d = None
+            else:
+                raise Exception("Valid token coordinates encoder: 'onehot' and 'rbf'. Your token_coord_encoder: " + self.token_coord_encoder)
 
         d_ij_token = torch.where(   # signed, symmetric relative distance as a non-negative bucket index for one-hot encoding
             same_chain, # condition
@@ -86,7 +86,10 @@ class RelativePositionEncoding(nn.Module):
         )
         a_ij_rel_chain = create_one_hot_encoding(d_ij_chain, 2 * self.s_max + 2)
 
-        p_ij = torch.cat([a_ij_rel_3d, a_ij_rel_token, a_ij_rel_chain], dim=-1)
+        if self.token_coord_encoder :
+            p_ij = torch.cat([a_ij_rel_3d, a_ij_rel_token, a_ij_rel_chain], dim=-1)
+        else:
+            p_ij = torch.cat([a_ij_rel_token, a_ij_rel_chain], dim=-1)
         p_ij = self.layer_norm(p_ij)
         p_ij = self.linear_no_bias(p_ij)
         p_ij = self.activation(p_ij)
