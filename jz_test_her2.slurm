@@ -16,7 +16,9 @@
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
 #SBATCH --time=20:00:00
-## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+
+
+# --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 # Protein - Ligand : "lba"
