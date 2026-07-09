@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=skempi               # lba, skempi, davis, her2
+#SBATCH --job-name=pretrain              # lba, skempi, davis, her2
 #SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j_%a.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --array=0-2
@@ -28,8 +28,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-SPLIT="$SLURM_ARRAY_TASK_ID"
-DATA="$SLURM_JOB_NAME"
+DATA="adit_pretrain_data"
 ADIT_SIZE="S"
 
 # ---- Welcome...
@@ -57,10 +56,8 @@ set -x
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
-    experiment=${DATA}_$ADIT_SIZE \
-    data.dataset.test_split=split_$SPLIT \
-    task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
-    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
+    experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
+    task_name=pretrain \
     logger=many_loggers \
-    logger.wandb.name=${DATA}_$ADIT_SIZE_$SPLIT \
-    logger.wandb.id=${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID
+    logger.wandb.name=pretrain \
+    logger.wandb.id=$SLURM_JOB_ID
