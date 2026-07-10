@@ -56,12 +56,13 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
+    task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++data.batch_size=16 \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=many_loggers \
-    logger.wandb.name=${DATA}_$ADIT_SIZE \
-    logger.wandb.id=$SLURM_JOB_ID
+    ++logger.wandb.name=${DATA}_$ADIT_SIZE \
+    ++logger.wandb.id=$SLURM_JOB_ID
 
 # trainer.devices : S : 2, M : 4, L : 4

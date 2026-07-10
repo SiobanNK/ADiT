@@ -42,6 +42,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data=$DATA \
+    task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=2 \
     ++data.batch_size=8 \
     ++data.dataset.split_seed=seed_1 \

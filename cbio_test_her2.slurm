@@ -2,7 +2,7 @@
 #SBATCH --job-name=her2
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
-#SBATCH --mem=16G
+#SBATCH --mem=45G
 #SBATCH --time=06:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
@@ -51,6 +51,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data=$DATA \
+    task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=1 \
     ++data.batch_size=1 \
     ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \

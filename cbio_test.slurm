@@ -46,6 +46,7 @@ export NUMEXPR_MAX_THREADS=8
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
+    task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=1 \
     ++data.batch_size=1 \
     ++data.dataset.test_split=split_$SPLIT \

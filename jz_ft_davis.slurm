@@ -55,6 +55,7 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
+    task_name=${DATA}_${ADIT_SIZE} \
     data=$DATA \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE  \
     ++data.batch_size=8 \

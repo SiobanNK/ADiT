@@ -29,7 +29,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/test.py"
-DATA="$SLURM_JOB_NAME"
+DATA="her2"
 FINETUNING_DATE="2026-07-07"
 FINETUNING="skempi_S_split_0_10-34-52"
 ADIT_SIZE="S"
@@ -60,6 +60,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     data=$DATA \
+    task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=1 \
     ++data.batch_size=1 \
     ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
