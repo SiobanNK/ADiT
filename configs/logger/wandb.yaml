@@ -7,7 +7,7 @@ wandb:
   offline: False
   id: "lba_token_dim_256" # pass correct id to resume experiment!
   anonymous: null # enable anonymous logging
-  project: "FMAS"
+  project: "ADiT"
   log_model: False # upload lightning ckpts
   prefix: "" # a string to put at the beginning of metric keys
   # entity: "" # set to name of your wandb team
