@@ -64,4 +64,6 @@ srun python "$RUN_SCRIPT" \
     ++data.batch_size=1 \
     ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
     ckpt_path=outputs/${FINETUNING_DATE}/${FINETUNING}/checkpoints/last.ckpt \
-    logger=many_loggers
+    logger=many_loggers \
+    logger.wandb.name=${DATA}_${ADIT_SIZE} \
+    logger.wandb.id=${SLURM_JOB_ID}
