@@ -1,21 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=her2
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --error=./logs/%x_%j.err
+#SBATCH --mem=16G
+#SBATCH --time=06:00:00
+#SBATCH --partition=cbio-gpu
+#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=4               # default 1, typically 4 or 5 - do not use more
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
-
-#SBATCH --account=hhy@h100      # echo $IDRPROJ
-#SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
-# Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
-# qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
-# des CPU du noeud pour la seule tache :
-#SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
-#SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=20:00:00
 
 
 # --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
@@ -27,11 +21,11 @@
 # Antibody-Antigen : "her2" (test only)
 
 
-RUN_DIR="$SCRATCH/ADiT"
+RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/test.py"
-DATA="$SLURM_JOB_NAME"
-FINETUNING_DATE="2026-07-07"
-FINETUNING="skempi_S_split_0_10-34-52"
+DATA="her2"
+FINETUNING_DATE="2026-06-19"
+FINETUNING="skempi_S_split_0_11-49-13"
 ADIT_SIZE="S"
 
 # ---- Welcome...
@@ -47,11 +41,8 @@ echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
 module purge
-module load arch/h100
-# source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
-conda deactivate
-conda activate $WORK/envs/adit
+conda activate adit
 # ---- Run it...
 cd "$RUN_DIR"
 set -x

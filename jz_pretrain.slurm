@@ -58,5 +58,5 @@ srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     task_name=pretrain \
     logger=many_loggers \
-    logger.wandb.name=pretrain \
-    logger.wandb.id=$SLURM_JOB_ID
+    ++logger.wandb.name=pretrain \
+    ++logger.wandb.id=pretrain_$SLURM_JOB_ID

@@ -13,7 +13,7 @@
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 
-RUN_DIR="$SCRATCH/ADiT"
+RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="$SLURM_JOB_NAME"
 ADIT_SIZE="S"
@@ -31,8 +31,6 @@ echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
 module purge
-module load arch/h100
-# source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
 conda deactivate
 conda activate $WORK/envs/adit
@@ -48,6 +46,8 @@ srun python "$RUN_SCRIPT" \
     ++data.batch_size=8 \
     ++data.dataset.split_seed=seed_1 \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
-    logger=wandb
+    logger=wandb \
+    ++logger.wandb.name=${DATA}_$ADIT_SIZE \
+    ++logger.wandb.id=${DATA}_$ADIT_SIZE_$SLURM_JOB_ID
 
 # trainer.devices : S : 2, M : 4, L : 4

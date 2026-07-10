@@ -62,5 +62,5 @@ srun python "$RUN_SCRIPT" \
     task_name=${DATA}_${ADIT_SIZE}_split_$SPLIT \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=many_loggers \
-    logger.wandb.name=${DATA}_$ADIT_SIZE_$SPLIT \
-    logger.wandb.id=${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID
+    ++logger.wandb.name=${DATA}_$ADIT_SIZE_$SPLIT \
+    ++logger.wandb.id=${DATA}_$ADIT_SIZE_${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID
