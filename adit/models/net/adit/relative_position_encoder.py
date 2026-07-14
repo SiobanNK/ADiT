@@ -36,19 +36,19 @@ class RelativePositionEncoding(nn.Module):
 
         self.token_coord_encoder = token_coord_encoder
 
-    def rbf(self, d, d_max=50, renorm=True, device="cpu"):
+    def rbf(self, d, d_max=50.0, renorm=True, device="cpu"):
         # angstrom
         rbf_dim = self.q_max + 1
         d_min = 0.0
 
-        d_mu = torch.linspace(d_min, d_max, rbf_dim, device=device)
-        d_mu = d_mu.view([1, -1])
+        d_mu = torch.linspace(d_min, d_max, rbf_dim, device=device) # [0.0000,  0.7812,  1.5625, ...]
+        d_mu = d_mu.view([1, -1])   # [[ 0.0000,  0.7812,  1.5625, ...]]
         d_sigma = (d_max - d_min) / rbf_dim
-        d_expand = torch.unsqueeze(d, -1)
+        d_expand = torch.unsqueeze(d, -1) # [[[0.0];[0.7812];[1.5625];...]] column
 
-        rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)
+        rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)    # size : (65, 1, 1, N)
         if renorm:
-            Z = 1 / rbf.sum(dim=-1)
+            Z = 1 / rbf.sum()
         else:
             Z = 1.0
 
