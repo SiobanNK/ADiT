@@ -39,7 +39,6 @@ echo "Script : $RUN_SCRIPT"
 echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
-module purge
 source ~/.bashrc
 conda activate adit
 # ---- Run it...
@@ -47,7 +46,7 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT" \
+python "$RUN_SCRIPT" \
     experiment=skempi_S_coord_encoder \
     data.dataset.test_split=split_$SPLIT \
     ++task_name=pretrain_$COORD_ENCODING \

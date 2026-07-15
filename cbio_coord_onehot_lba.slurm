@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=skempi_onehot
-#SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%a_%j.err
+#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j.err
 #SBATCH --array=0-2
 #SBATCH --mem=45G
 #SBATCH --time=20:00:00
@@ -18,8 +18,7 @@
 
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
-DATA="skempi"
-SPLIT="$SLURM_ARRAY_TASK_ID"
+DATA="lba"
 
 COORD_ENCODING="onehot"     # onehot , rbf , null
 
@@ -46,7 +45,7 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT" \
+python "$RUN_SCRIPT" \
     experiment=skempi_S_coord_encoder \
     data.dataset.test_split=split_$SPLIT \
     ++task_name=pretrain_$COORD_ENCODING \
