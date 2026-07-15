@@ -1,10 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=skempi_rbf
-#SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%a_%j.err
-#SBATCH --array=0
+#SBATCH --job-name=skempi_overall
+#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=20:00:00
+#SBATCH --time=00:00:20
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -17,15 +16,10 @@
 
 
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
-RUN_SCRIPT="./adit/train.py"
-DATA="skempi"
-SPLIT="$SLURM_ARRAY_TASK_ID"
+RUN_SCRIPT="./scripts/skempi_metric.py"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
 
-# Protein - Ligand : "lba"
-# Drug - Target : "davis"
-# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -46,12 +40,4 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT" \
-    experiment=skempi_S_coord_encoder \
-    data.dataset.test_split=split_$SPLIT \
-    ++task_name=pretrain_$COORD_ENCODING \
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.save_file="${COORD_ENCODING}/result_split_$SPLIT.pkl" \
-    logger=many_loggers \
-    ++logger.wandb.name=test_skempi_${COORD_ENCODING} \
-    ++logger.wandb.id=skempi_${COORD_ENCODING}_${SLURM_JOB_ID}
+srun python "$RUN_SCRIPT" --input_dir="outputs"

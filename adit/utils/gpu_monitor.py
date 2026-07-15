@@ -102,11 +102,15 @@ class JobGPUMonitor(Callback):
                     metrics[f"my_gpu/gpu{i}/utilization_pct"] = util.gpu
                     metrics[f"my_gpu/gpu{i}/memory_used_MB"] = mem.used / 1024**2
                     metrics[f"my_gpu/gpu{i}/memory_total_MB"] = mem.total / 1024**2
+                    metrics[f"my_gpu/gpu{i}/memory_used_pct"] = 100 * mem.used / mem.total   # <-- new
                 except Exception as e:
                     log.warning(f"GPU monitor failed on index {i}: {e}")
             if metrics:
                 metrics["my_gpu/avg_utilization_pct"] = sum(
-                    v for k, v in metrics.items() if k.endswith("utilization_pct")
+                    v for k, v in metrics.items() if k.endswith("utilization_pct") and "avg" not in k
+                ) / len(gpu_indices)
+                metrics["my_gpu/avg_memory_used_pct"] = sum(
+                    v for k, v in metrics.items() if k.endswith("memory_used_pct")
                 ) / len(gpu_indices)
                 step = trainer.global_step
                 for lg in loggers:

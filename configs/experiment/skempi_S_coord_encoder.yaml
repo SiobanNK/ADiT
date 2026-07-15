@@ -31,7 +31,7 @@ data:
       pretrain: true
 
 model:
-  save_file: ${paths.root_dir}/outputs/${now:%Y-%m-%d}/${task_name}_${now:%H-%M-%S}/result_${data.dataset.test_split}.pkl
+  save_file: ${hydra:runtime.output_dir}/result_${data.dataset.test_split}.pkl
   optimizer:
     lr: 1e-4
   net:
