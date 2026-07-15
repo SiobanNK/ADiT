@@ -37,16 +37,6 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-# module load pytorch-gpu/py3/2.5.0
-# VENV="$WORK/envs/adit"
-# source $WORK/envs/adit/bin/activate
-# echo "python: $(which python)"
-# srun which python
-# srun python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-# echo "WORK var: $WORK"
-# echo "VENV var: $VENV"
-# ls -la "$VENV/bin/activate"
-
 module load miniforge/25.9.1
 conda deactivate
 conda activate $WORK/envs/adit
@@ -55,5 +45,4 @@ conda activate $WORK/envs/adit
 cd "$RUN_DIR"
 echo 'Launching script'
 
-# srun bash -c "source $VENV/bin/activate && python $RUN_SCRIPT"
-srun python "$RUN_SCRIPT" # useless?: --config-name=reference
+srun python "$RUN_SCRIPT"
