@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain              # lba, skempi, davis, her2
+#SBATCH --job-name=pretrain
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --mail-type=END                 # Send email at job completion
@@ -8,8 +8,8 @@
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --ntasks-per-node=4
+#SBATCH --gres=gpu:4
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
@@ -19,15 +19,8 @@
 #SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
-# Protein - Ligand : "lba"
-# Drug - Target : "davis"
-# Protein - Protein : "skempi"
-# Antibody-Antigen : "her2"
-
-
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-DATA="adit_pretrain_data"
 ADIT_SIZE="S"
 
 # ---- Welcome...
@@ -56,7 +49,6 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    task_name=pretrain \
     logger=many_loggers \
     ++logger.wandb.name=pretrain \
     ++logger.wandb.id=pretrain_$SLURM_JOB_ID
