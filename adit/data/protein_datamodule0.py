@@ -5,8 +5,6 @@ from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from lightning import LightningDataModule
 from hydra.utils import instantiate
 
-from adit.data.components.samplers import DynamicBatchSampler, compute_or_load_lengths
-
 
 class BatchTensorConverter:
     """Callable to convert an unprocessed (labels + strings) batch to a
@@ -64,24 +62,48 @@ class ProteinDataModule(LightningDataModule):
     """`LightningDataModule` for a single protein dataset,
         for pretrain or finetune purpose.
 
-    Two batching modes:
+    ### To be revised.### 
+    
+    The MNIST database of handwritten digits has a training set of 60,000 examples, and a test set of 10,000 examples.
+    It is a subset of a larger set available from NIST. The digits have been size-normalized and centered in a
+    fixed-size image. The original black and white images from NIST were size normalized to fit in a 20x20 pixel box
+    while preserving their aspect ratio. The resulting images contain grey levels as a result of the anti-aliasing
+    technique used by the normalization algorithm. the images were centered in a 28x28 image by computing the center of
+    mass of the pixels, and translating the image so as to position this point at the center of the 28x28 field.
 
-    - Fixed `batch_size` (default, unchanged behaviour): every batch has the
-      same number of samples, whatever their length.
-    - Budgeted (`max_pair_budget` set): every batch has ~the same total
-      attention cost instead, via `DynamicBatchSampler`. Useful here because
-      ADiT samples range from small monomers to multi-chain PPI/antibody-
-      antigen complexes, so a fixed sample count either under-uses memory or
-      OOMs depending on what lands in the batch. `batch_size` is then ignored
-      (kept only as a fallback / sanity cap via `max_batch_size`).
+    A `LightningDataModule` implements 7 key methods:
 
-      Default cost model is `sum_of_squares`: budgets on `sum(L_i**2)` over
-      the batch, matching ADiT's token-level attention, which builds its pair
-      representation from dense per-sample (block-diagonal) edges -- so a
-      big complex adds its own L^2 to the batch cost, it does not multiply
-      the cost of every other sample in the batch the way padding would.
-      Pass `cost_model="padded"` + `max_tokens_per_batch` instead for the
-      more conservative `batch_size * max_L` model.
+    ```python
+        def prepare_data(self):
+        # Things to do on 1 GPU/TPU (not on every GPU/TPU in DDP).
+        # Download data, pre-process, split, save to disk, etc...
+
+        def setup(self, stage):
+        # Things to do on every process in DDP.
+        # Load data, set variables, etc...
+
+        def train_dataloader(self):
+        # return train dataloader
+
+        def val_dataloader(self):
+        # return validation dataloader
+
+        def test_dataloader(self):
+        # return test dataloader
+
+        def predict_dataloader(self):
+        # return predict dataloader
+
+        def teardown(self, stage):
+        # Called on every process in DDP.
+        # Clean up after fit or test.
+    ```
+
+    This allows you to share a full dataset without explaining how to download,
+    split, transform and process the data.
+
+    Read the docs:
+        https://lightning.ai/docs/pytorch/latest/data/datamodule.html
     """
 
     def __init__(
@@ -93,43 +115,14 @@ class ProteinDataModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         shuffle: bool = False,
-        max_pair_budget: Optional[int] = None,
-        max_tokens_per_batch: Optional[int] = None,
-        cost_model: str = "sum_of_squares",
-        max_batch_size: Optional[int] = None,
-        length_key: str = "seq_mask",
-        length_cache_dir: Optional[str] = None,
     ) -> None:
-        """Initialize a `ProteinDataModule`.
+        """Initialize a `MNISTDataModule`.
 
-        :param batch_size: Samples per batch. Ignored if `max_pair_budget` or
-            `max_tokens_per_batch` is set (kept only for the DDP-divisibility
-            check / as a display value).
+        :param data_dir: The data directory. Defaults to `"data/"`.
+        :param train_val_test_split: The train, validation and test split. Defaults to `(55_000, 5_000, 10_000)`.
+        :param batch_size: The batch size. Defaults to `64`.
         :param num_workers: The number of workers. Defaults to `0`.
         :param pin_memory: Whether to pin memory. Defaults to `False`.
-        :param max_pair_budget: If set (with `cost_model="sum_of_squares"`,
-            the default), switch to dynamic batching budgeted on
-            `sum(L_i**2) <= max_pair_budget`, matching ADiT's token-level
-            attention cost. See class docstring for why this (not a padded
-            `n * max_L` model) is the right proxy here.
-        :param max_tokens_per_batch: Budget for `cost_model="padded"`
-            (`n_samples * max_L_in_batch <= max_tokens_per_batch`). Only used
-            when `cost_model="padded"`.
-        :param cost_model: `"sum_of_squares"` (default) or `"padded"`. See
-            `DynamicBatchSampler` docstring.
-        :param max_batch_size: Optional safety cap on the number of samples in
-            a dynamically-built batch (e.g. to avoid huge batches of tiny
-            samples). Only used when dynamic batching is active.
-        :param length_key: Key whose `.shape[0]` gives L for a sample
-            (default `"seq_mask"`, matching ADiT's unified feature dict). Keys
-            named `length_key` or ending in `f"_{length_key}"` are all summed
-            (handles SKEMPI/HER2 samples, which bundle a `wt_seq_mask` and
-            `mt_seq_mask`). Only used when dynamic batching is active.
-        :param length_cache_dir: Directory to cache per-split length arrays
-            (`train_lengths.npy`, `val_lengths.npy`, `test_lengths.npy`) so
-            they aren't recomputed every run. On Jean-Zay, precompute this
-            once (see `scripts/precompute_lengths.py`) before launching a
-            multi-GPU/multi-node job so ranks don't race to write the cache.
         """
         super().__init__()
 
@@ -144,8 +137,7 @@ class ProteinDataModule(LightningDataModule):
         self.data_test: Optional[Dataset] = None
 
         self.batch_size_per_device = batch_size
-        self._epoch = 0
-
+        
         # print(f"Dataset size: {len(self.dataset)}")
 
     def prepare_data(self) -> None:
@@ -198,70 +190,21 @@ class ProteinDataModule(LightningDataModule):
             print(f"Test set size: {len(self.data_test)}")
         else:
             raise NotImplementedError(f"Stage {stage} not implemented.")
-
-    def _lengths_for(self, dataset: Dataset[Any], split: str):
-        cache_path = None
-        if self.hparams.length_cache_dir is not None:
-            cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths.npy"
-        return compute_or_load_lengths(
-            dataset,
-            cache_path=cache_path,
-            length_key=self.hparams.length_key,
-            num_workers=self.hparams.num_workers,
-        )
-
-    def _dataloader_template(
-        self, dataset: Dataset[Any], split: str, train: bool = True
-    ) -> DataLoader[Any]:
+        
+    def _dataloader_template(self, dataset: Dataset[Any], train: bool = True) -> DataLoader[Any]:
         """Create a dataloader from a dataset.
 
         :param dataset: The dataset.
-        :param split: "train" / "val" / "test", used for the length cache filename.
         :return: The dataloader.
         """
         batch_collator = BatchTensorConverter()    # list of dicts -> dict of tensors
-
-        dynamic = (
-            self.hparams.max_pair_budget is not None
-            or self.hparams.max_tokens_per_batch is not None
-        )
-        if not dynamic:
-            return DataLoader(
-                dataset=dataset,
-                collate_fn=batch_collator,
-                batch_size=self.batch_size_per_device,
-                num_workers=self.hparams.num_workers,
-                pin_memory=self.hparams.pin_memory,
-                shuffle=(self.hparams.shuffle and train),
-            )
-
-        world_size = self.trainer.world_size if self.trainer is not None else 1
-        rank = self.trainer.global_rank if self.trainer is not None else 0
-
-        lengths = self._lengths_for(dataset, split)
-        batch_sampler = DynamicBatchSampler(
-            lengths=lengths,
-            max_pair_budget=self.hparams.max_pair_budget,
-            max_tokens_per_batch=self.hparams.max_tokens_per_batch,
-            cost_model=self.hparams.cost_model,
-            shuffle=(self.hparams.shuffle and train),
-            max_batch_size=self.hparams.max_batch_size,
-            num_replicas=world_size,
-            rank=rank,
-            seed=self.hparams.generator_seed,
-        )
-        # NB: reshuffled every call, so set `trainer.reload_dataloaders_every_n_epochs=1`
-        # in your Hydra config to actually get a new packing each epoch.
-        batch_sampler.set_epoch(self._epoch)
-        if train:
-            self._epoch += 1
-
         return DataLoader(
             dataset=dataset,
             collate_fn=batch_collator,
-            batch_sampler=batch_sampler,
+            batch_size=self.batch_size_per_device,
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
+            shuffle=(self.hparams.shuffle and train),
         )
     
     def train_dataloader(self) -> DataLoader[Any]:
@@ -269,7 +212,7 @@ class ProteinDataModule(LightningDataModule):
 
         :return: The train dataloader.
         """
-        return self._dataloader_template(self.data_train, split="train", train=True)
+        return self._dataloader_template(self.data_train, train=True)
            
 
     def val_dataloader(self) -> DataLoader[Any]:
@@ -277,14 +220,14 @@ class ProteinDataModule(LightningDataModule):
 
         :return: The validation dataloader.
         """
-        return self._dataloader_template(self.data_val, split="val", train=False)
+        return self._dataloader_template(self.data_val, train=False)
 
     def test_dataloader(self) -> DataLoader[Any]:
         """Create and return the test dataloader.
 
         :return: The test dataloader.
         """
-        return self._dataloader_template(self.data_test, split="test", train=False)
+        return self._dataloader_template(self.data_test, train=False)
 
     def teardown(self, stage: Optional[str] = None) -> None:
         """Lightning hook for cleaning up after `trainer.fit()`, `trainer.validate()`,
@@ -300,7 +243,7 @@ class ProteinDataModule(LightningDataModule):
 
         :return: A dictionary containing the datamodule state that you want to save.
         """
-        return {"epoch": self._epoch}
+        return {}
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """Called when loading a checkpoint. Implement to reload datamodule state given datamodule
@@ -308,4 +251,5 @@ class ProteinDataModule(LightningDataModule):
 
         :param state_dict: The datamodule state returned by `self.state_dict()`.
         """
-        self._epoch = state_dict.get("epoch", 0)
+        pass
+
