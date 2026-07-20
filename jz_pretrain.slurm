@@ -52,7 +52,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++trainer.devices=$SLURM_ARRAY_TASK_COUNT \
+    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
     ++logger.wandb.name=pretrain_$COORD_ENCODING \
     ++logger.wandb.id=pretrain_$COORD_ENCODING_$SLURM_JOB_ID
