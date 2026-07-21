@@ -24,7 +24,7 @@ RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
 ADIT_SIZE="S"
-IDENTITY=60 # 30, 60*
+IDENTITY=60 # 30, 60
 EPOCHS=100
 DROPOUT=0.5
 
@@ -51,13 +51,19 @@ srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     task_name=${DATA}_${ADIT_SIZE} \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
-    trainer.max_epoch=EPOCHS \
+    ++trainer.max_epochs=$EPOCHS \
     ++data.batch_size=16 \
+    ++data.num_workers=$SLURM_CPUS_PER_TASK \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
-    model.dropout=$DROPOUT \
+    ++model.net.dropout=$DROPOUT \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}_$ADIT_SIZE \
-    ++logger.wandb.id=${DATA}_${ADIT_SIZE}_$SLURM_JOB_ID
+    ++logger.wandb.name=${DATA}_$ADIT_SIZE_dynamic \
+    ++logger.wandb.id=${DATA}_${ADIT_SIZE}_$SLURM_JOB_ID \
+    ++logger.wandb.project=${DATA} \
+    ++trainer.reload_dataloaders_every_n_epochs=1 \
+    ++trainer.use_distributed_sampler=False \
+    ++data.max_pair_budget=250000 \
+    ++data.max_total_atoms=15000 \
 
 # trainer.devices : S : 2, M : 4, L : 4

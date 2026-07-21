@@ -1,0 +1,7 @@
+gpu_monitor:
+  _target_: adit.utils.gpu_monitor.JobGPUMonitor
+  interval: 15
+
+batch_size_monitor:
+  _target_: adit.utils.batch_size_monitor.BatchSizeMonitor
+  log_every_n_steps: 1

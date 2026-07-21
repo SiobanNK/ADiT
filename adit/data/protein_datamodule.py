@@ -14,7 +14,7 @@ class BatchTensorConverter:
     """
     def __init__(self, target_keys: Optional[List] = None):
         self.target_keys = target_keys
-    
+
     def __call__(self, raw_batch: Sequence[Dict[str, object]]):
         B = len(raw_batch)
         # Only do for Tensor
@@ -27,7 +27,7 @@ class BatchTensorConverter:
             collated_batch[k] = self.collate_dense_tensors([d[k] for d in raw_batch], pad_v=0.0)
         for k in non_array_keys:    # return non-array keys as is
             collated_batch[k] = [d[k] for d in raw_batch]
-        
+
         return collated_batch
 
     @staticmethod
@@ -82,6 +82,16 @@ class ProteinDataModule(LightningDataModule):
       the cost of every other sample in the batch the way padding would.
       Pass `cost_model="padded"` + `max_tokens_per_batch` instead for the
       more conservative `batch_size * max_L` model.
+
+      Set `max_total_atoms` too (recommended whenever `max_pair_budget` is
+      set): ADiT's *atom-level* attention is windowed/local (fixed `N_query`/
+      `N_key`), so its cost scales linearly with the batch's *total* atom
+      count, not with any single sample's L. `max_pair_budget` alone doesn't
+      bound this -- a batch of many small samples can pass the token-level
+      budget while still holding far more atoms than the atom-level module
+      can handle, OOMing there specifically. `max_total_atoms` adds a second,
+      linear budget (`sum(atoms_i) <= max_total_atoms`) enforced jointly with
+      `max_pair_budget`.
     """
 
     def __init__(
@@ -96,6 +106,8 @@ class ProteinDataModule(LightningDataModule):
         max_pair_budget: Optional[int] = None,
         max_tokens_per_batch: Optional[int] = None,
         cost_model: str = "sum_of_squares",
+        max_total_atoms: Optional[int] = None,
+        atom_key: str = "atom_mask",
         max_batch_size: Optional[int] = None,
         length_key: str = "seq_mask",
         length_cache_dir: Optional[str] = None,
@@ -117,6 +129,14 @@ class ProteinDataModule(LightningDataModule):
             when `cost_model="padded"`.
         :param cost_model: `"sum_of_squares"` (default) or `"padded"`. See
             `DynamicBatchSampler` docstring.
+        :param max_total_atoms: If set, also budget on
+            `sum(atoms_i) <= max_total_atoms` over the batch, to bound the
+            atom-level (windowed) attention module's memory -- see class
+            docstring. Strongly recommended alongside `max_pair_budget`.
+        :param atom_key: Key whose `.sum()` gives the real atom count for a
+            sample (default `"atom_mask"`). Keys named `atom_key` or ending
+            in `f"_{atom_key}"` are all summed (SKEMPI/HER2's `wt_`/`mt_`).
+            Only used when `max_total_atoms` is set.
         :param max_batch_size: Optional safety cap on the number of samples in
             a dynamically-built batch (e.g. to avoid huge batches of tiny
             samples). Only used when dynamic batching is active.
@@ -136,9 +156,9 @@ class ProteinDataModule(LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
-        
+
         self.dataset = dataset
-        
+
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
@@ -200,15 +220,24 @@ class ProteinDataModule(LightningDataModule):
             raise NotImplementedError(f"Stage {stage} not implemented.")
 
     def _lengths_for(self, dataset: Dataset[Any], split: str):
+        """Returns (lengths, atom_counts). `atom_counts` is None unless
+        `max_total_atoms` is set.
+        """
         cache_path = None
         if self.hparams.length_cache_dir is not None:
-            cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths.npy"
-        return compute_or_load_lengths(
+            suffix = "_with_atoms" if self.hparams.max_total_atoms is not None else ""
+            cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths{suffix}.npy"
+
+        out = compute_or_load_lengths(
             dataset,
             cache_path=cache_path,
             length_key=self.hparams.length_key,
+            atom_key=self.hparams.atom_key if self.hparams.max_total_atoms is not None else None,
             num_workers=self.hparams.num_workers,
         )
+        if self.hparams.max_total_atoms is not None:
+            return out[:, 0], out[:, 1]  # lengths, atom_counts
+        return out, None
 
     def _dataloader_template(
         self, dataset: Dataset[Any], split: str, train: bool = True
@@ -238,12 +267,14 @@ class ProteinDataModule(LightningDataModule):
         world_size = self.trainer.world_size if self.trainer is not None else 1
         rank = self.trainer.global_rank if self.trainer is not None else 0
 
-        lengths = self._lengths_for(dataset, split)
+        lengths, atom_counts = self._lengths_for(dataset, split)
         batch_sampler = DynamicBatchSampler(
             lengths=lengths,
             max_pair_budget=self.hparams.max_pair_budget,
             max_tokens_per_batch=self.hparams.max_tokens_per_batch,
             cost_model=self.hparams.cost_model,
+            atom_counts=atom_counts,
+            max_total_atoms=self.hparams.max_total_atoms,
             shuffle=(self.hparams.shuffle and train),
             max_batch_size=self.hparams.max_batch_size,
             num_replicas=world_size,
@@ -263,14 +294,14 @@ class ProteinDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
         )
-    
+
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
 
         :return: The train dataloader.
         """
         return self._dataloader_template(self.data_train, split="train", train=True)
-           
+
 
     def val_dataloader(self) -> DataLoader[Any]:
         """Create and return the validation dataloader.

@@ -36,45 +36,63 @@ import torch
 from torch.utils.data import DataLoader
 
 
+def _reduce_matching_keys(item: dict, key: str, reduce: str) -> int:
+    """Sum `reduce(v)` (`v.shape[0]` or `v.sum()`) over every key in `item`
+    that is `key` or ends with `f"_{key}"` (handles SKEMPI/HER2's wt_/mt_
+    prefixes, where both structures should count).
+    """
+    total, found = 0, False
+    suffix = "_" + key
+    for k, v in item.items():
+        if k == key or k.endswith(suffix):
+            found = True
+            if not torch.is_tensor(v):
+                v = torch.as_tensor(v)
+            total += int(v.shape[0]) if reduce == "shape0" else int(v.sum().item())
+    if not found:
+        raise KeyError(
+            f"No key named '{key}' or ending in '{suffix}' found in item "
+            f"(keys: {list(item.keys())}). Pass a custom `length_fn`/`atom_count_fn`."
+        )
+    return total
+
+
 def _default_length_fn(item: dict, length_key: str = "seq_mask") -> int:
-    """L for one dataset item: shape[0] of `length_key`, summed over every
+    """L (token count) for one dataset item: sum of `shape[0]` over every
     key that is `length_key` or ends with `f"_{length_key}"`.
 
     Plain datasets (pretrain/LBA/Davis) only have `"seq_mask"` -> L of the
     single (protein [+ ligand]) sample. SKEMPI/HER2 have `"wt_seq_mask"` and
-    `"mt_seq_mask"` -> L is the sum of both structures' lengths, since both
-    get padded into their own dense tensors by `BatchTensorConverter` but
-    both live in the same batch (see the previous discussion of this file).
+    `"mt_seq_mask"` -> L is the sum of both structures' lengths.
     """
-    total, found = 0, False
-    suffix = "_" + length_key
-    for k, v in item.items():
-        if k == length_key or k.endswith(suffix):
-            found = True
-            if not torch.is_tensor(v):
-                v = torch.as_tensor(v)
-            total += int(v.shape[0])
-    if not found:
-        raise KeyError(
-            f"No key named '{length_key}' or ending in '{suffix}' found in "
-            f"item (keys: {list(item.keys())}). Pass a custom `length_fn` "
-            f"or `length_key` matching your featurization."
-        )
-    return total
+    return _reduce_matching_keys(item, length_key, reduce="shape0")
+
+
+def _default_atom_count_fn(item: dict, atom_key: str = "atom_mask") -> int:
+    """Real atom count for one dataset item: sum of `.sum()` over every key
+    that is `atom_key` or ends with `f"_{atom_key}"` (again handling SKEMPI/
+    HER2's wt_/mt_ prefixes).
+    """
+    return _reduce_matching_keys(item, atom_key, reduce="sum")
 
 
 def compute_lengths(
     dataset,
     length_fn: Optional[Callable] = None,
     length_key: str = "seq_mask",
+    atom_count_fn: Optional[Callable] = None,
+    atom_key: Optional[str] = None,
     num_workers: int = 0,
-) -> np.ndarray:
-    """Iterate once over `dataset` and record L (token count) per index.
+):
+    """Iterate once over `dataset` and record, per index, L (token count) and
+    optionally the real atom count.
 
-    Pass `length_fn(item) -> int` instead of the default if you want a
-    different notion of length (e.g. real atom count via
-    `item["atom_mask"].sum()`, if you ever need to budget on that instead
-    of on padded-tensor size).
+    Pass `length_fn(item) -> int` / `atom_count_fn(item) -> int` instead of
+    the defaults for a custom notion of either. Set `atom_key` (e.g.
+    `"atom_mask"`) to also compute atom counts in the same pass -- needed for
+    `DynamicBatchSampler`'s `max_total_atoms` budget (see its docstring for
+    why the token-level `max_pair_budget` alone doesn't bound atom-level
+    attention memory).
 
     This calls `dataset[i]` for every i, so for datasets like `AditPDBDataset`
     where `__getitem__` re-samples a random cluster member + random crop, the
@@ -88,21 +106,31 @@ def compute_lengths(
     `scripts/precompute_lengths.py`, especially before a multi-node Jean-Zay
     job (don't let every rank recompute this in parallel on a shared
     filesystem).
+
+    Returns an (N,) array if `atom_key` is None, else an (N, 2) array with
+    columns `[token_length, atom_count]`.
     """
     if length_fn is None:
         def length_fn(item):
             return _default_length_fn(item, length_key=length_key)
+    if atom_key is not None and atom_count_fn is None:
+        def atom_count_fn(item):
+            return _default_atom_count_fn(item, atom_key=atom_key)
 
     def _collate(batch):
-        return [length_fn(item) for item in batch]
+        if atom_key is None:
+            return [length_fn(item) for item in batch]
+        return [(length_fn(item), atom_count_fn(item)) for item in batch]
 
     loader = DataLoader(
         dataset, batch_size=1, num_workers=num_workers, collate_fn=_collate
     )
-    lengths = []
-    for batch_lengths in loader:
-        lengths.extend(batch_lengths)
-    return np.asarray(lengths, dtype=np.int64)
+    out = []
+    for batch_out in loader:
+        out.extend(batch_out)
+    if atom_key is None:
+        return np.asarray(out, dtype=np.int64)
+    return np.asarray(out, dtype=np.int64)  # shape (N, 2): [length, atom_count]
 
 
 def compute_or_load_lengths(
@@ -110,8 +138,10 @@ def compute_or_load_lengths(
     cache_path: Optional[str] = None,
     length_fn: Optional[Callable] = None,
     length_key: str = "seq_mask",
+    atom_count_fn: Optional[Callable] = None,
+    atom_key: Optional[str] = None,
     num_workers: int = 0,
-) -> np.ndarray:
+):
     """`compute_lengths`, cached to a `.npy` file at `cache_path`.
 
     On Jean-Zay, prefer building this cache once with
@@ -127,6 +157,8 @@ def compute_or_load_lengths(
         dataset,
         length_fn=length_fn,
         length_key=length_key,
+        atom_count_fn=atom_count_fn,
+        atom_key=atom_key,
         num_workers=num_workers,
     )
 
@@ -139,31 +171,39 @@ def compute_or_load_lengths(
 
 class DynamicBatchSampler(torch.utils.data.Sampler):
     """Yields lists of dataset indices whose total attention cost stays under
-    a fixed budget.
+    fixed budget(s).
 
-    ADiT's token-level attention (`SimplePairFormer` + `AttentionPairBias`,
-    see `pairformer.py`/`diffusion_transformer.py`) builds its pair
-    representation `z_ij` from *dense, per-sample* edges
-    (`generate_dense_attention_edge_batch`), concatenated block-diagonally
-    across the batch -- i.e. there is no edge (and no computation) between
-    tokens of two different samples. So the total edge/pair-tensor cost of a
-    batch is `sum(L_i ** 2)`, not `batch_size * max(L_i) ** 2`: a big complex
-    does not "contaminate" the cost of the other samples sharing its batch,
-    it only adds its own L^2.
+    ADiT's forward pass has two attention modules with different cost
+    profiles, both of which need to be budgeted for packing to be safe:
 
-    (The atom-level attention is windowed/local -- `generate_sparse_attention_edge_batch`
-    -- so it's linear in atom count and not the binding constraint; the
-    quadratic token-level pair representation dominates memory for anything
-    but tiny samples.)
+    - Token-level (`SimplePairFormer` + the token `DiffusionTransformer`):
+      dense, per-sample (block-diagonal) edges -- `generate_dense_attention_edge_batch`.
+      A big complex adds its own `L**2` to the batch cost, it does not
+      multiply the cost of every other sample in the batch the way padding
+      would. Budgeted via `max_pair_budget`: `sum(L_i ** 2) <= max_pair_budget`.
+
+    - Atom-level (the atom `DiffusionTransformer`, windowed/local attention
+      via `generate_sparse_attention_edge_batch` with fixed `N_query`/`N_key`):
+      each atom attends to at most `N_key` neighbours *regardless of protein
+      size*, so its edge count -- and the resulting message tensors, e.g.
+      `A_ij[..., None] * v_i[edge[1]]` in `AttentionPairBias` -- scale
+      *linearly* with the **total atom count of the whole batch**, not with
+      any single sample's length. A batch packed only against
+      `max_pair_budget` can pass that check while still holding e.g. 90+
+      small samples, whose atoms sum to something huge -> OOM in the
+      atom-level module specifically (not the token-level one). Budgeted via
+      `max_total_atoms`: `sum(atoms_i) <= max_total_atoms`.
+
+    Set whichever budget(s) are relevant; a sample is only added to the
+    current batch if *all* set budgets remain satisfied.
 
     Packing: samples are length-sorted (after shuffling, so ties don't always
-    land in the same batch) and greedily packed while
-    `sum(L_i ** 2 for i in batch) <= max_pair_budget`.
+    land in the same batch) and greedily packed while every active budget
+    holds.
 
-    Pass `cost_model="padded"` instead if you need the old, more conservative
-    model (`batch_size * max_len <= max_tokens_per_batch`) -- e.g. if you
-    later add a module that pads to `(B, L_max, ...)` rather than using
-    block-diagonal edges.
+    Pass `cost_model="padded"` + `max_tokens_per_batch` instead of
+    `max_pair_budget` if you need the old, more conservative
+    `batch_size * max_L <= max_tokens_per_batch` model for the token side.
 
     DDP: batches are built identically on every rank (same seed + epoch),
     then simply strided by `rank::num_replicas`, so ranks see disjoint
@@ -176,6 +216,8 @@ class DynamicBatchSampler(torch.utils.data.Sampler):
         max_pair_budget: Optional[int] = None,
         max_tokens_per_batch: Optional[int] = None,
         cost_model: str = "sum_of_squares",
+        atom_counts: Optional[Sequence[int]] = None,
+        max_total_atoms: Optional[int] = None,
         shuffle: bool = True,
         drop_last: bool = False,
         max_batch_size: Optional[int] = None,
@@ -195,9 +237,16 @@ class DynamicBatchSampler(torch.utils.data.Sampler):
                 "cost_model='padded' needs max_tokens_per_batch "
                 "(budget on batch_size * max(L_i) per batch)."
             )
+        if max_total_atoms is not None:
+            assert atom_counts is not None, (
+                "max_total_atoms needs atom_counts (per-index real atom "
+                "count, e.g. from compute_lengths(..., atom_key='atom_mask'))."
+            )
         self.lengths = np.asarray(lengths)
+        self.atom_counts = np.asarray(atom_counts) if atom_counts is not None else None
         self.max_pair_budget = max_pair_budget
         self.max_tokens_per_batch = max_tokens_per_batch
+        self.max_total_atoms = max_total_atoms
         self.cost_model = cost_model
         self.shuffle = shuffle
         self.drop_last = drop_last
@@ -227,31 +276,37 @@ class DynamicBatchSampler(torch.utils.data.Sampler):
         order = indices[np.argsort(self.lengths[indices], kind="stable")]
 
         batches, cur_batch = [], []
-        cur_cost, cur_max_len = 0, 0  # cur_cost: sum(L^2) so far; cur_max_len: for "padded" model
+        cur_pair_cost, cur_max_len, cur_atom_total = 0, 0, 0
         for idx in order:
             length = int(self.lengths[idx])
+            atoms = int(self.atom_counts[idx]) if self.atom_counts is not None else 0
             new_size = len(cur_batch) + 1
 
             if self.cost_model == "sum_of_squares":
-                new_cost = cur_cost + length ** 2
-                over_budget = new_cost > self.max_pair_budget
+                new_pair_cost = cur_pair_cost + length ** 2
+                over_pair_budget = new_pair_cost > self.max_pair_budget
             else:
                 new_max_len = max(cur_max_len, length)
-                new_cost = new_size * new_max_len
-                over_budget = new_cost > self.max_tokens_per_batch
+                new_pair_cost = new_size * new_max_len
+                over_pair_budget = new_pair_cost > self.max_tokens_per_batch
 
+            over_atom_budget = (
+                self.max_total_atoms is not None
+                and (cur_atom_total + atoms) > self.max_total_atoms
+            )
             over_size_cap = (
                 self.max_batch_size is not None and new_size > self.max_batch_size
             )
 
-            if cur_batch and (over_budget or over_size_cap):
+            if cur_batch and (over_pair_budget or over_atom_budget or over_size_cap):
                 batches.append(cur_batch)
                 cur_batch = []
-                cur_cost, cur_max_len = 0, 0
+                cur_pair_cost, cur_max_len, cur_atom_total = 0, 0, 0
 
             cur_batch.append(int(idx))
-            cur_cost += length ** 2
+            cur_pair_cost += length ** 2
             cur_max_len = max(cur_max_len, length)
+            cur_atom_total += atoms
 
         if cur_batch and (not self.drop_last or len(batches) == 0):
             batches.append(cur_batch)
