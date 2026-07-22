@@ -23,6 +23,9 @@ RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
+COORD_ENCODING="null"     # onehot , rbf , null
+
+
 # ---- Welcome...
 echo '-------------------------------------'
 echo "[$0] >>> Start : $(date '+%d/%m/%Y-%H:%M:%S')"
@@ -49,8 +52,10 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
+    ++model.net.token_coord_encoder=$COORD_ENCODING \
     ++trainer.max_epochs=3 \
     ++trainer.max_epochs=3 \
+    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
     ++logger.wandb.name=pretrain_3epochs \
     ++logger.wandb.id=pretrain_$SLURM_JOB_ID
