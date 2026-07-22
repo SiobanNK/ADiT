@@ -58,12 +58,13 @@ srun python "$RUN_SCRIPT" \
     ++model.net.dropout=$DROPOUT \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}_$ADIT_SIZE_dynamic \
-    ++logger.wandb.id=${DATA}_${ADIT_SIZE}_$SLURM_JOB_ID \
+    ++logger.wandb.name=${DATA}${IDENTITY}_$ADIT_SIZE \
+    ++logger.wandb.id=${DATA}${IDENTITY}_${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID \
     ++logger.wandb.project=${DATA} \
-    ++trainer.reload_dataloaders_every_n_epochs=1 \
-    ++trainer.use_distributed_sampler=False \
-    ++data.max_pair_budget=250000 \
-    ++data.max_total_atoms=15000 \
+    ++logger.wandb.offline=False \
+    # ++trainer.reload_dataloaders_every_n_epochs=1 \
+    # ++trainer.use_distributed_sampler=False \
+    # ++data.max_pair_budget=250000 \
+    # ++data.max_total_atoms=15000 \
 
 # trainer.devices : S : 2, M : 4, L : 4

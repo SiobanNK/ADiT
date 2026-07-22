@@ -2,9 +2,9 @@
 #SBATCH --job-name=skempi
 #SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j_%a.err
-#SBATCH --array=0-2
+#SBATCH --array=0
 #SBATCH --mem=40G
-#SBATCH --time=00:20:00
+#SBATCH --time=05:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -47,17 +47,20 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
-    ++trainer.reload_dataloaders_every_n_epochs=1 \
-    ++trainer.use_distributed_sampler=False \
-    ++data.max_pair_budget=250000 \
-    ++data.max_total_atoms=25000 \
-    task_name=${DATA}_${ADIT_SIZE} \
+    data.dataset.test_split=split_$SPLIT \
+    task_name=${DATA}${SPLIT}_${ADIT_SIZE} \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++data.num_workers=$SLURM_CPUS_PER_TASK \
     ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}_$ADIT_SIZE \
-    ++logger.wandb.id=${DATA}_${ADIT_SIZE}_$SLURM_JOB_ID \
+    ++logger.wandb.name=${DATA}${SPLIT}_$ADIT_SIZE \
+    ++logger.wandb.id=${DATA}_${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID \
+    ++logger.wandb.project=${DATA} \
+    ++logger.wandb.offline=False \
+    # ++trainer.reload_dataloaders_every_n_epochs=1 \
+    # ++trainer.use_distributed_sampler=False \
+    # ++data.max_pair_budget=250000 \
+    # ++data.max_total_atoms=15000 \
 
 
 # trainer.devices : S : 2, M : 4, L : 4
