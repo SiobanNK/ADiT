@@ -24,19 +24,3 @@ train_val_split: [0.95, 0.05]
 num_workers: 8
 pin_memory: false
 shuffle: true
-
-
-# Dynamic (token/pair-budget) batching -- disabled by default (all null),
-# so behaviour is unchanged unless you override these. Activate with e.g.:
-#   ++data.max_pair_budget=250000 ++data.length_cache_dir=lengths/<name> \
-#   ++trainer.reload_dataloaders_every_n_epochs=1 ++trainer.use_distributed_sampler=False
-# See DynamicBatchSampler docstring for why sum_of_squares (not a padded
-# batch_size * max_L model) is the right cost model for ADiT's token-level
-# attention.
-max_pair_budget: null
-max_total_atoms: null
-max_tokens_per_batch: null
-cost_model: sum_of_squares
-max_batch_size: null
-length_key: seq_mask
-length_cache_dir: lengths/skempi_0

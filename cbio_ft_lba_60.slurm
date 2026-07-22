@@ -62,9 +62,5 @@ srun python "$RUN_SCRIPT" \
     ++logger.wandb.id=${DATA}${IDENTITY}_${SLURM_JOB_ID}_$SLURM_ARRAY_TASK_ID \
     ++logger.wandb.project=${DATA} \
     ++logger.wandb.offline=False \
-    # ++trainer.reload_dataloaders_every_n_epochs=1 \
-    # ++trainer.use_distributed_sampler=False \
-    # ++data.max_pair_budget=250000 \
-    # ++data.max_total_atoms=15000 \
 
 # trainer.devices : S : 2, M : 4, L : 4
