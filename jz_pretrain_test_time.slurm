@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain_3epochs
+#SBATCH --job-name=pretrain_1epoch
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --mail-type=END                 # Send email at job completion
@@ -24,6 +24,7 @@ RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
 COORD_ENCODING="null"     # onehot , rbf , null
+EPOCHS=1
 
 
 # ---- Welcome...
@@ -53,8 +54,8 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++trainer.min_epochs=3 \
-    ++trainer.max_epochs=3 \
+    ++trainer.min_epochs=$EPOCHS \
+    ++trainer.max_epochs=$EPOCHS \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
     ++logger.wandb.name=$SLURM_JOB_NAME \
