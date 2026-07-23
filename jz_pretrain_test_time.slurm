@@ -49,8 +49,8 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    ++trainer.max_epochs=3 \
+    ++trainer.min_epochs=3 \
     ++trainer.max_epochs=3 \
     logger=many_loggers \
-    ++logger.wandb.name=pretrain_3epochs \
-    ++logger.wandb.id=pretrain_$SLURM_JOB_ID
+    ++logger.wandb.name=$SLURM_JOB_NAME \
+    ++logger.wandb.id=${SLURM_JOB_NAME}_$SLURM_JOB_ID
