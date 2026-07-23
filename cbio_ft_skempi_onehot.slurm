@@ -23,6 +23,9 @@ SPLIT="$SLURM_ARRAY_TASK_ID"
 
 COORD_ENCODING="onehot"     # onehot , rbf , null
 
+CKPT_EPOCH=33 #$((SLURM_ARRAY_TASK_ID * 33))
+CKPT_PATH="outputs/2027-07-20/denoising_S_scale0_5_12-49-46/checkpoints/epoch_0${CKPT_EPOCH}.ckpt"
+
 # Protein - Ligand : "lba"
 # Drug - Target : "davis"
 # Protein - Protein : "skempi"
@@ -51,6 +54,7 @@ srun python "$RUN_SCRIPT" \
     data.dataset.test_split=split_$SPLIT \
     ++task_name=pretrain_$COORD_ENCODING \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ckpt_path=$CKPT_PATH \
     logger=many_loggers \
     ++logger.wandb.name=skempi_${COORD_ENCODING} \
     ++logger.wandb.id=skempi_${COORD_ENCODING}_${SLURM_JOB_ID}
