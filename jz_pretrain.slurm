@@ -15,7 +15,7 @@
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=99:00:00
+#SBATCH --time=25:00:00
 #SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
@@ -23,7 +23,8 @@ RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
-COORD_ENCODING="onehot"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
+EPOCHS=33
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -53,6 +54,10 @@ srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
+    ++trainer.min_epochs=$EPOCHS \
+    ++trainer.max_epochs=$EPOCHS \
+    ++task_name=denoising_${ADIT_SIZE}_$COORD_ENCODING \
     logger=many_loggers \
     ++logger.wandb.name=pretrain_$COORD_ENCODING \
-    ++logger.wandb.id=pretrain_$COORD_ENCODING_$SLURM_JOB_ID
+    ++logger.wandb.id=pretrain_$COORD_ENCODING_$SLURM_JOB_ID \
+    ++logger.wandb.project="pretrain"

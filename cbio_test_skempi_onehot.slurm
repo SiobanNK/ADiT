@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=skempi_overall
-#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err
+#SBATCH --job-name=skempi_onehot
+#SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%a_%j.err
+#SBATCH --array=2
 #SBATCH --mem=45G
-#SBATCH --time=00:00:20
+#SBATCH --time=00:10:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -13,13 +14,21 @@
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 
-
-
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
-RUN_SCRIPT="./scripts/skempi_metric.py"
+RUN_SCRIPT="./adit/test.py"
+DATA="skempi"
+SPLIT="$SLURM_ARRAY_TASK_ID"
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
+COORD_ENCODING="onehot"     # onehot , rbf , null
 
+CKPT_EPOCH=95 #$((SLURM_ARRAY_TASK_ID * 32))
+CKPT_PATH="/outputs/2026-07-27/skempi2_onehot_00-55-00/checkpoints/last.ckpt"
+
+SAVE_FILE="outputs/onehot/epoch_${EPOCH}/result_split_$SPLIT"
+
+# Protein - Ligand : "lba"
+# Drug - Target : "davis"
+# Protein - Protein : "skempi"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -40,4 +49,11 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
-srun python "$RUN_SCRIPT" --input_dir="outputs"
+srun python "$RUN_SCRIPT" \
+    experiment=skempi_S_ft_onehot \
+    ++data.batch_size=1 \
+    ++trainer.devices=1 \
+    ++data.dataset.test_split=split_$SPLIT \
+    ++model.save_file=$SAVE_FILE \
+    ++task_name=skempi${SPLIT}_S_onehot \
+    ckpt_path=$CKPT_PATH \
