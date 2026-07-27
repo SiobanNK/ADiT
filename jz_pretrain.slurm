@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain
+#SBATCH --job-name=pretrain_rbf
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --mail-type=END                 # Send email at job completion
@@ -23,7 +23,7 @@ RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
 EPOCHS=33
 
 # ---- Welcome...
