@@ -31,6 +31,7 @@ Usage is two-step:
 from typing import Optional, Sequence, Callable
 
 import os
+import csv
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -151,7 +152,16 @@ def compute_or_load_lengths(
     they all read instead of racing to write.
     """
     if cache_path is not None and os.path.exists(cache_path):
-        return np.load(cache_path)
+        # return np.load(cache_path)
+        with open(cache_path, mode="r", newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            # Flattens single-column rows or handles multi-column arrays
+            data = [
+                [float(x) for x in row] if len(row) > 1 else float(row[0])
+                for row in reader
+                if row
+            ]
+        return np.array(data)
 
     lengths = compute_lengths(
         dataset,
@@ -164,7 +174,15 @@ def compute_or_load_lengths(
 
     if cache_path is not None:
         os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
-        np.save(cache_path, lengths)
+        # np.save(cache_path, lengths)
+        # Convert lengths to a standard iterable list/array structure
+        lengths_arr = np.asarray(lengths)
+        with open(cache_path, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if lengths_arr.ndim == 1:
+                writer.writerows([[val] for val in lengths_arr])
+            else:
+                writer.writerows(lengths_arr)
 
     return lengths
 

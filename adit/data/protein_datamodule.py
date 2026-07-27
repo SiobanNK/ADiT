@@ -226,7 +226,8 @@ class ProteinDataModule(LightningDataModule):
         cache_path = None
         if self.hparams.length_cache_dir is not None:
             suffix = "_with_atoms" if self.hparams.max_total_atoms is not None else ""
-            cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths{suffix}.npy"
+            # cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths{suffix}.npy"
+            cache_path = f"{self.hparams.length_cache_dir}/{split}_lengths{suffix}.csv"
 
         out = compute_or_load_lengths(
             dataset,
