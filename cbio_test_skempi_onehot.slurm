@@ -3,12 +3,12 @@
 #SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%a_%j.err
 #SBATCH --array=2
-#SBATCH --mem=45G
+#SBATCH --mem=15G
 #SBATCH --time=00:10:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
 ##SBATCH --cpus-per-task=1
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
