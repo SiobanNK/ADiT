@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=lba
-#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err
+#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x%a_%j.err
+#SBATCH --array=30
 #SBATCH --mem=15G
 #SBATCH --time=01:00:00
 #SBATCH --partition=cbio-gpu
@@ -19,8 +20,14 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
-IDENTITY=60
-SIZE="S"
+IDENTITY=$SLURM_ARRAY_TASK_ID
+if [[ "$IDENTITY" -eq 60 ]]; then
+    DROPOUT=0.5
+    EPOCHS=3 # total: 3 epochs
+else    # IDENTITY=30
+    DROPOUT=0.0
+    EPOCHs=99
+fi  # cf articlefi  # cf articleSIZE="S"
 
 COORD_ENCODING="onehot"     # onehot , rbf , null
 
@@ -51,6 +58,8 @@ python "$RUN_SCRIPT" \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
     ++task_name=${DATA}${IDENTITY}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.dropout=$DROPOUT \
+    ++trainer.max_epochs=$EPOCHS \
     ckpt_path=$CKPT_PATH \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
