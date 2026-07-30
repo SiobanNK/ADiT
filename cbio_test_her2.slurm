@@ -24,9 +24,15 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/test.py"
 DATA="her2"
-FINETUNING_DATE="2026-06-19"
-FINETUNING="skempi_S_split_0_11-49-13"
+# FINETUNING_DATE="2026-06-19"
+# FINETUNING="skempi_S_split_0_11-49-13"
 ADIT_SIZE="S"
+
+COORD_ENCODING="onehot"
+EPOCH=33
+
+FINETUNED_CKPT="outputs/${COORD_ENCODING}/epoch_${EPOCH}/skempi0_S/checkpoints/last.ckpt"
+SAVE_FILE="outputs/${COORD_ENCODING}/epoch_${EPOCH}/result_${DATA}_${ADIT_SIZE}.pkl"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -50,11 +56,12 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
+    ++model.net.token_coord_encoder=$COORD_ENCODING \
     data=$DATA \
     task_name=${DATA}_$ADIT_SIZE \
     ++data.batch_size=1 \
-    ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
-    ckpt_path=outputs/${FINETUNING_DATE}/${FINETUNING}/checkpoints/last.ckpt \
+    ++model.save_file=$SAVE_FILE \
+    ckpt_path=$FINETUNED_CKPT \
     logger=many_loggers \
     ++logger.wandb.name=${DATA}_${ADIT_SIZE} \
     ++logger.wandb.id=${DATA}_${ADIT_SIZE}_${SLURM_JOB_ID}
