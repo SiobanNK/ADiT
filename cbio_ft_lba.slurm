@@ -2,9 +2,9 @@
 #SBATCH --job-name=lba
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err
-#SBATCH --array=30
+#SBATCH --array=30,60
 #SBATCH --mem=15G
-#SBATCH --time=01:00:00
+#SBATCH --time=02:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -26,7 +26,7 @@ if [[ "$IDENTITY" -eq 60 ]]; then
     EPOCHS=3 # total: 3 epochs
 else    # IDENTITY=30
     DROPOUT=0.0
-    EPOCHs=99
+    EPOCHS=99
 fi  # cf articlefi  # cf articleSIZE="S"
 
 COORD_ENCODING="onehot"     # onehot , rbf , null

@@ -1,3 +1,0 @@
-gpu_monitor:
-  _target_: adit.utils.gpu_monitor.JobGPUMonitor
-  interval: 15
