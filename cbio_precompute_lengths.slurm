@@ -1,14 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=precompute_lengths_pdb
-#SBATCH --output=./logs/%x_%j_%a.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j_%a.err
-#SBATCH --array=0
-#SBATCH --mem=40G
+#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x_%j.err
+#SBATCH --mem=15G
 #SBATCH --time=05:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
@@ -20,11 +19,9 @@
 # Antibody-Antigen : "her2"
 
 
-RUN_DIR="$SCRATCH/ADiT"
+RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./scripts/precompute_lengths.py"
-SPLIT="$SLURM_ARRAY_TASK_ID"
-DATA="skempi"
-ADIT_SIZE="S"
+
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -48,9 +45,9 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_S_pdb_fixed_0_5 \
     task_name=precompute_lengths_pdb \
-    ++data.length_cache_dir=lengths/pdb \
+    ++data.length_cache_dir=lengths/pdb_no_truncation \
     ++data.max_total_atoms=250000 \
-    ++dataset.transform.truncate_length=None
+    ++data.dataset.transform.truncate_length=null
     # data.dataset.test_split=split_$SPLIT \
     # ++trainer.reload_dataloaders_every_n_epochs=1 \
     # ++trainer.use_distributed_sampler=False \
