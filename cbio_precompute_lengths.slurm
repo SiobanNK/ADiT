@@ -49,7 +49,8 @@ srun python "$RUN_SCRIPT" \
     experiment=new_denoise_S_pdb_fixed_0_5 \
     task_name=precompute_lengths_pdb \
     ++data.length_cache_dir=lengths/pdb \
-    ++data.max_total_atoms=25000
+    ++data.max_total_atoms=250000 \
+    ++dataset.transform.truncate_length=None
     # data.dataset.test_split=split_$SPLIT \
     # ++trainer.reload_dataloaders_every_n_epochs=1 \
     # ++trainer.use_distributed_sampler=False \
