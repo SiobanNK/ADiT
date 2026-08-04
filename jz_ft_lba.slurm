@@ -38,10 +38,10 @@ else    # IDENTITY=60
     EPOCHS=99
 fi  # cf articlefi  # cf articleSIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
 
-CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
+# CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
+CKPT_PATH="outputs/2026-08-02/denoising_S_rbf_11-15-08/checkpoints/last.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'
