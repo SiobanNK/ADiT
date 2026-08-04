@@ -113,12 +113,13 @@ class BatchSizeMonitor(Callback):
 
         pair_cost_sum_L_sq = int((per_sample_len.to(torch.float64) ** 2).sum().item())
 
-        num_atoms = None
-        if "atom_mask" in batch:
-            atom_mask = batch["atom_mask"]
+        atom_mask_keys = [k for k in batch if k == "atom_mask" or k.endswith("_atom_mask")]
+
+        for k in atom_mask_keys:
+            atom_mask = batch[k]
             if not torch.is_tensor(atom_mask):
                 atom_mask = torch.as_tensor(atom_mask)
-            num_atoms = int(atom_mask.sum().item())
+            num_atoms = int(atom_mask.sum().item()) if num_atoms is None else num_atoms + int(atom_mask.sum().item())
 
         padding_waste_pct = (
             100.0 * (1 - num_tokens_real / num_tokens_padded) if num_tokens_padded else 0.0

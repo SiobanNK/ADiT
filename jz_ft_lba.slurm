@@ -24,8 +24,9 @@
 # Drug - Target : "davis"
 # Protein - Protein : "skempi"
 
-RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
+RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
+
 DATA="lba"
 SIZE="S"
 IDENTITY="$SLURM_ARRAY_TASK_ID"
@@ -54,8 +55,13 @@ echo "Script : $RUN_SCRIPT"
 echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
+module purge
+module load arch/h100
+# module load pytorch-gpu/py3/2.5.0
+# source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
-conda activate adit
+conda deactivate
+conda activate $WORK/envs/adit
 # ---- Run it...
 cd "$RUN_DIR"
 set -x
