@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=lba
+#SBATCH --job-name=lba_null
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err
 #SBATCH --array=30,60
-#SBATCH --mem=15G
-#SBATCH --time=02:00:00
+#SBATCH --mem=45G
+#SBATCH --time=10:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-##SBATCH --cpus-per-task=1
+#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+##SBATCH --cpus-per-task=4
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -20,19 +20,20 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
-IDENTITY=$SLURM_ARRAY_TASK_ID
-if [[ "$IDENTITY" -eq 60 ]]; then
-    DROPOUT=0.5
-    EPOCHS=3 # total: 3 epochs
-else    # IDENTITY=30
+SIZE="S"
+IDENTITY="$SLURM_ARRAY_TASK_ID"
+if [[ "$IDENTITY" -eq 30 ]]; then
     DROPOUT=0.0
+    EPOCHS=3 # total: 3 epochs
+else    # IDENTITY=60
+    DROPOUT=0.5
     EPOCHS=99
 fi  # cf articlefi  # cf articleSIZE="S"
 
-COORD_ENCODING="onehot"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
 
-CKPT_EPOCH=33 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="ckpts/onehot/epoch_0${CKPT_EPOCH}.ckpt"
+CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
+CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'

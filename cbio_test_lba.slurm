@@ -16,7 +16,7 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/test.py"
 DATA="lba"
-IDENTITY=60
+IDENTITY=30
 SIZE="S"
 
 COORD_ENCODING="onehot"     # onehot , rbf , null
