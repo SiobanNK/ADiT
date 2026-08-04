@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=skempi_null
+#SBATCH --job-name=skempi_rbf
 #SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%a_%j.err
 #SBATCH --array=0-2

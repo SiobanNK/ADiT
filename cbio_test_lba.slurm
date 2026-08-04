@@ -16,12 +16,12 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/test.py"
 DATA="lba"
-IDENTITY=30
+IDENTITY=60
 SIZE="S"
 
-COORD_ENCODING="onehot"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
 
-EPOCH=33 #$((SLURM_ARRAY_TASK_ID * 32))
+EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="outputs/${COORD_ENCODING}/epoch_${EPOCH}/${DATA}${IDENTITY}_${SIZE}/checkpoints/last.ckpt"
 
 SAVE_FILE="outputs/${COORD_ENCODING}/epoch_${EPOCH}/result_${DATA}${IDENTITY}_${SIZE}.pkl"

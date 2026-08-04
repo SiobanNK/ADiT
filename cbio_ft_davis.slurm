@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=davis_null
+#SBATCH --job-name=davis_onehot
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
-#SBATCH --mem=45G
+#SBATCH --mem=15G
 #SBATCH --time=50:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
-#SBATCH --gres=gpu:A40:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --gres=gpu:P100:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
 #SBATCH --cpus-per-task=4
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
@@ -18,7 +18,7 @@ RUN_SCRIPT="./adit/train.py"
 DATA="davis"
 SIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
