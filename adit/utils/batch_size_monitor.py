@@ -114,6 +114,7 @@ class BatchSizeMonitor(Callback):
         pair_cost_sum_L_sq = int((per_sample_len.to(torch.float64) ** 2).sum().item())
 
         atom_mask_keys = [k for k in batch if k == "atom_mask" or k.endswith("_atom_mask")]
+        num_atoms = None
 
         for k in atom_mask_keys:
             atom_mask = batch[k]

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=lba_null
+#SBATCH --job-name=lba_rbf
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err
 #SBATCH --array=30,60
@@ -36,12 +36,12 @@ if [[ "$IDENTITY" -eq 30 ]]; then
 else    # IDENTITY=60
     DROPOUT=0.5
     EPOCHS=99
-fi  # cf articlefi  # cf articleSIZE="S"
+fi  # cf article
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
 
-# CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="outputs/2026-08-02/denoising_S_rbf_11-15-08/checkpoints/last.ckpt"
+CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
+CKPT_PATH="./outputs/2026-08-02/denoising_S_rbf_11-15-08/checkpoints/last.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'

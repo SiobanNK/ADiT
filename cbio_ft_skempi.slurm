@@ -2,7 +2,7 @@
 #SBATCH --job-name=skempi_rbf
 #SBATCH --output=./logs/%x_%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%a_%j.err
-#SBATCH --array=0-2
+#SBATCH --array=1-2
 #SBATCH --mem=45G
 #SBATCH --time=07:00:00
 #SBATCH --partition=cbio-gpu
