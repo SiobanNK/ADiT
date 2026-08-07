@@ -2,7 +2,7 @@
 #SBATCH --job-name=lba30_rbf
 #SBATCH --output=./logs/%x30_10epochs_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x30_10epochs_%j.err
-#SBATCH --array=42
+#SBATCH --array=40-42
 #SBATCH --mem=45G
 #SBATCH --time=20:00:00
 #SBATCH --partition=cbio-gpu
@@ -21,7 +21,7 @@ RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
 SIZE="S"
-IDENTITY=30 # "$SLURM_ARRAY_TASK_ID"
+IDENTITY=60 # "$SLURM_ARRAY_TASK_ID"
 SEED="$SLURM_ARRAY_TASK_ID"
 if [[ "$IDENTITY" -eq 30 ]]; then
     DROPOUT=0.0
