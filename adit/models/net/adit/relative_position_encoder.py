@@ -22,7 +22,7 @@ def compute_token_coordinates(atom_coordinates, atom2token):
 
 class RelativePositionEncoding(nn.Module):
 
-    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None):
+    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None, d_max=50.0):
         super(RelativePositionEncoding, self).__init__()
         self.q_max = q_max if token_coord_encoder else -1
         self.r_max = r_max
@@ -35,15 +35,16 @@ class RelativePositionEncoding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.token_coord_encoder = token_coord_encoder
+        self.d_max = d_max
 
-    def rbf(self, d, d_max=50.0, renorm=True, device="cpu"):
+    def rbf(self, d, renorm=True, device="cpu"):
         # angstrom
         rbf_dim = self.q_max + 1
         d_min = 0.0
 
-        d_mu = torch.linspace(d_min, d_max, rbf_dim, device=device) # [0.0000,  0.7812,  1.5625, ...]
+        d_mu = torch.linspace(d_min, self.d_max, rbf_dim, device=device) # [0.0000,  0.7812,  1.5625, ...]
         d_mu = d_mu.view([1, -1])   # [[ 0.0000,  0.7812,  1.5625, ...]]
-        d_sigma = (d_max - d_min) / rbf_dim
+        d_sigma = (self.d_max - d_min) / rbf_dim
         d_expand = torch.unsqueeze(d, -1) # [[[0.0];[0.7812];[1.5625];...]] column
 
         rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)    # size : (65, 1, 1, N)
@@ -60,14 +61,13 @@ class RelativePositionEncoding(nn.Module):
         if self.token_coord_encoder :
             token_coordinates = compute_token_coordinates(atom_coordinates, atom2token) # shape : (num_tokens,3)
             dist = ((token_coordinates[edge_token[0]] - token_coordinates[edge_token[1]]) ** 2).sum(dim=-1).sqrt()
-            d_max = 50  # angstrom
 
             if self.token_coord_encoder == "onehot" :
-                d_ij_3d = torch.clamp(dist.floor().long(), 0, d_max)   # distances entre tous les tokens, même de chaînes différentes.
+                d_ij_3d = torch.clamp(dist.floor().long(), 0, self.d_max)   # distances entre tous les tokens, même de chaînes différentes.
                 a_ij_rel_3d = create_one_hot_encoding(d_ij_3d, self.q_max + 1)
 
             elif self.token_coord_encoder == "rbf" :
-                a_ij_rel_3d = self.rbf(dist, d_max, device=token_idx.device)
+                a_ij_rel_3d = self.rbf(dist, self.d_max, device=token_idx.device)
 
             else:
                 raise ValueError(

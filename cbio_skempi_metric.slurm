@@ -7,14 +7,14 @@
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --gres=gpu:K80:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
 ##SBATCH --cpus-per-task=1
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./scripts/skempi_metric.py"
-INPUT_DIR="outputs/onehot/epoch_33"
+INPUT_DIR="outputs/null/epoch_32"
 
 
 # ---- Welcome...

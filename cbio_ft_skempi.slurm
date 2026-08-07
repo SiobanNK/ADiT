@@ -20,6 +20,7 @@ DATA="skempi"
 SPLIT="$SLURM_ARRAY_TASK_ID"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
+D_MAX=50
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
@@ -53,6 +54,7 @@ srun python "$RUN_SCRIPT" \
     data.dataset.test_split=split_$SPLIT \
     ++task_name=${DATA}${SPLIT}_S_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.token.d_max=$D_MAX \
     ckpt_path=$CKPT_PATH \
     logger=many_loggers \
     ++logger.wandb.name=${DATA}${SPLIT}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \

@@ -19,7 +19,7 @@ DATA="lba"
 IDENTITY=60
 SIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
 
 EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="outputs/${COORD_ENCODING}/epoch_${EPOCH}/${DATA}${IDENTITY}_${SIZE}/checkpoints/last.ckpt"

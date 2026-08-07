@@ -24,6 +24,7 @@ RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
+D_MAX=50
 EPOCHS=33
 
 # ---- Welcome...
@@ -53,11 +54,12 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.token.d_max=$D_MAX \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++trainer.min_epochs=$EPOCHS \
     ++trainer.max_epochs=$EPOCHS \
-    ++task_name=denoising_${ADIT_SIZE}_$COORD_ENCODING \
+    ++task_name=denoising_${ADIT_SIZE}_${COORD_ENCODING}_d$D_MAX \
     logger=many_loggers \
-    ++logger.wandb.name=pretrain_$COORD_ENCODING \
-    ++logger.wandb.id=pretrain_$COORD_ENCODING_$SLURM_JOB_ID \
+    ++logger.wandb.name=pretrain_${COORD_ENCODING}_d$D_MAX \
+    ++logger.wandb.id=pretrain_${COORD_ENCODING}_d$D_MAX_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"

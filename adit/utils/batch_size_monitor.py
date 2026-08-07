@@ -132,6 +132,6 @@ class BatchSizeMonitor(Callback):
             "num_tokens_real": num_tokens_real,
             "num_tokens_padded": num_tokens_padded,
             "padding_waste_pct": padding_waste_pct,
-            "num_atoms": num_atoms if num_atoms is not None else num_tokens_real,
+            "num_atoms": num_atoms if num_atoms is not None else 0,
             "pair_cost_sum_L_sq": pair_cost_sum_L_sq,
         }

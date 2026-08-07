@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=lba_null
-#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x%a_%j.err
-#SBATCH --array=30,60
+#SBATCH --job-name=lba30_rbf
+#SBATCH --output=./logs/%x30_10epochs_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x30_10epochs_%j.err
+#SBATCH --array=42
 #SBATCH --mem=45G
-#SBATCH --time=10:00:00
+#SBATCH --time=20:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -21,16 +21,18 @@ RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
 SIZE="S"
-IDENTITY="$SLURM_ARRAY_TASK_ID"
+IDENTITY=30 # "$SLURM_ARRAY_TASK_ID"
+SEED="$SLURM_ARRAY_TASK_ID"
 if [[ "$IDENTITY" -eq 30 ]]; then
     DROPOUT=0.0
-    EPOCHS=3 # total: 3 epochs
+    EPOCHS=10 # 3
 else    # IDENTITY=60
     DROPOUT=0.5
     EPOCHS=99
-fi  # cf articlefi  # cf articleSIZE="S"
+fi  # cf article
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
+D_MAX=50
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
@@ -56,14 +58,16 @@ echo 'Launching script'
 
 python "$RUN_SCRIPT" \
     experiment=${DATA}_$SIZE \
+    ++seed=$SEED \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
-    ++task_name=${DATA}${IDENTITY}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    ++task_name=${DATA}${IDENTITY}_seed${SEED}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.token.d_max=$D_MAX \
     ++model.net.dropout=$DROPOUT \
     ++trainer.max_epochs=$EPOCHS \
     ckpt_path=$CKPT_PATH \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}${IDENTITY}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    ++logger.wandb.name=${DATA}${IDENTITY}_seed${SEED}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    ++logger.wandb.id=${DATA}${IDENTITY}_seed${SEED}_${COORD_ENCODING}_${SLURM_JOB_ID} \
     ++logger.wandb.project=$DATA
