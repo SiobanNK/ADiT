@@ -31,7 +31,7 @@ else    # IDENTITY=60
     EPOCHS=99
 fi  # cf article
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
 D_MAX=50
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
@@ -62,7 +62,7 @@ python "$RUN_SCRIPT" \
     ++data.dataset.split_identity_threshold=identity_$IDENTITY \
     ++task_name=${DATA}${IDENTITY}_seed${SEED}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.token.d_max=$D_MAX \
+    ++model.net.d_max=$D_MAX \
     ++model.net.dropout=$DROPOUT \
     ++trainer.max_epochs=$EPOCHS \
     ckpt_path=$CKPT_PATH \

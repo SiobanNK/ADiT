@@ -37,7 +37,7 @@ class RelativePositionEncoding(nn.Module):
         self.token_coord_encoder = token_coord_encoder
         self.d_max = d_max
 
-    def rbf(self, d, renorm=True, device="cpu"):
+    def rbf(self, d, device="cpu"):
         # angstrom
         rbf_dim = self.q_max + 1
         d_min = 0.0
@@ -48,12 +48,7 @@ class RelativePositionEncoding(nn.Module):
         d_expand = torch.unsqueeze(d, -1) # [[[0.0];[0.7812];[1.5625];...]] column
 
         rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)    # size : (65, 1, 1, N)
-        if renorm:
-            Z = 1 / rbf.sum()
-        else:
-            Z = 1.0
-
-        return rbf * Z
+        return rbf
 
     def forward(self, token_idx, token2chain, edge_token, atom_coordinates, atom2token):
         same_chain = token2chain[edge_token[0]] == token2chain[edge_token[1]]

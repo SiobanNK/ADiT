@@ -52,7 +52,7 @@ srun python "$RUN_SCRIPT" \
     experiment=${DATA}_${SIZE} \
     ++task_name=${DATA}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.token.d_max=$D_MAX \
+    ++model.net.d_max=$D_MAX \
     ++model.net.dropout=0.2 \
     ckpt_path=$CKPT_PATH \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
