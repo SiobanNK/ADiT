@@ -1,0 +1,5 @@
+# @package net
+max_atom_neighbour_dist: 5.0
+max_token_neighbour_dist: 10.0
+atom_gat_positions: [False, False]
+token_gat_positions: [False, False]
