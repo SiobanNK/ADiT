@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 from torch_scatter import scatter_mean
+from torch_cluster import radius_graph
 
 
 def generate_sparse_attention_matrix(num_atom, N_query, N_key, device):
@@ -35,37 +36,24 @@ def generate_sparse_attention_edge_batch(num_tokens, num_atoms_per_token, N_quer
     return edge
 
 
-def generate_sparse_euclidian_attention_matrix(dist_matrix, max_neighbour_dist, device):
-    """
-    Generate a sparse binary adjacency matrix.
-    """
-    num_nodes = dist_matrix.shape[0]
-    adj = torch.zeros((num_nodes, num_nodes), device=device, dtype=torch.bool)
-    adj[dist_matrix < max_neighbour_dist] = 1
-    return adj
 
-def generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist):
-    """
-    Generate sparse attention edge batch.
-    Nodes are atoms or tokens.
-    """
-    device = dist_matrix.device
-    batch_size = dist_matrix.shape[0]
+def generate_euclidian_edge_index(num_nodes, node_coordinates, neighbour_radius):
+    # batch vector: which sample each atom belongs to, e.g. [0,0,0,1,1,2,2,2,2,...]
+    batch = torch.repeat_interleave(
+        torch.arange(num_nodes.shape[0], device=num_nodes.device), num_nodes
+    )
+    edge_index = radius_graph(
+        node_coordinates,
+        r=neighbour_radius,
+        batch=batch,
+        loop=True,       # keep self-loops, to match your original `dist < max_neighbour_dist` on the diagonal (dist=0)
+        max_num_neighbors=num_nodes.max().item(),  # avoid silently truncating dense regions; tune if memory-bound
+    )
+    return edge_index
 
-    adjs = (generate_sparse_euclidian_attention_matrix(dist_matrix[i], max_neighbour_dist, device) for i in range(batch_size))
-    adj = torch.block_diag(*adjs)
-    edge = torch.nonzero(adj).transpose(0, 1)
-    return edge
 
-def atom_euclidian_edge_index(num_atoms, atom_coordinates, max_neighbour_dist: float = 5.):
-    dense_edges = generate_dense_attention_edge_batch(num_atoms)
-    dist_matrix = ((atom_coordinates[dense_edges[0]] - atom_coordinates[dense_edges[1]]) ** 2).sum(dim=-1).sqrt()
-    return generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist)
-
-def token_euclidian_edge_index(token_edges, atom_coordinates, atom2token, max_neighbour_dist: float = 11.):
-    token_coordinates = scatter_mean(atom_coordinates, atom2token, dim=0)
-    dist_matrix = ((token_coordinates[token_edges[0]] - token_coordinates[token_edges[1]]) ** 2).sum(dim=-1).sqrt()
-    return generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist)
+def generate_token_coordinates(atom_coordinates, atom2token):
+    return scatter_mean(atom_coordinates, atom2token, dim=0)
 
 
 def generate_dense_attention_matrix(num_token, device):
