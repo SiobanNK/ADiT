@@ -5,18 +5,19 @@ from torch_scatter import scatter_mean
 from adit.models.net.adit.common import LinearNoBias, MLP_P_LM
 from adit.models.net.adit.diffusion_transformer import DiffusionTransformer
 from adit.common import residue_constants
+from adit.models.net.adit.token_graph import OptionalGAT
 
 
 class AtomAttentionEncoder(nn.Module):
 
     def __init__(
-        self, 
-        atom_dim, 
-        atom_pair_dim, 
-        N_block, 
-        N_head, 
-        token_dim, 
-        token_pair_dim, 
+        self,
+        atom_dim,
+        atom_pair_dim,
+        N_block,
+        N_head,
+        token_dim,
+        token_pair_dim,
         atom_emb_dim = 64,
         dropout = 0.0,
     ):
@@ -27,7 +28,7 @@ class AtomAttentionEncoder(nn.Module):
         self.linear_no_bias_coords = LinearNoBias(3, atom_dim)
 
         self.rbf_dim = 16
-        
+
         self.linear_D_lm = LinearNoBias(3, atom_pair_dim)
         self.linear_dist_D_lm = LinearNoBias(self.rbf_dim, atom_pair_dim)
         self.linear_v_lm = LinearNoBias(1, atom_pair_dim)
@@ -58,7 +59,7 @@ class AtomAttentionEncoder(nn.Module):
         return rbf
 
     def forward(
-        self, atom_name, atomic_number, atom_belong_to_protein, atom_coordinates, 
+        self, atom_name, atomic_number, atom_belong_to_protein, atom_coordinates,
         atom2token, num_atoms, edge, token_feat_trunk = None, token_feat_pair = None, edge_matrix_token = None
     ):
         '''
@@ -75,7 +76,7 @@ class AtomAttentionEncoder(nn.Module):
         atom_name_xyz_emb = torch.cat([atom_name_emb, atom_type_emb], dim=-1)
         C_l = self.linear_atom_input(atom_name_xyz_emb)
 
-        v_lm = (atom2token[edge[0]] == atom2token[edge[1]]).view(-1, 1) 
+        v_lm = (atom2token[edge[0]] == atom2token[edge[1]]).view(-1, 1)
         D_lm = atom_coordinates[edge[0]] - atom_coordinates[edge[1]]
         dist = (D_lm ** 2).sum(dim=-1).sqrt()
         edge_attr_dist = self.rbf(dist, device=atom_name_emb.device)
@@ -96,22 +97,31 @@ class AtomAttentionEncoder(nn.Module):
         P_lm = P_lm + self.mlp_P_lm(P_lm)
 
         Q_l = self.diffusion_transformer(Q_l, C_l, P_lm, edge)  # (num_atom, atom_dim)
+        # Q_l = self.GAT(Q_l, atom_coordinates)
 
         # Mean pooling for each residue
         A_i = scatter_mean(self.relu(self.linear_no_bias_Q_l(Q_l)), atom2token, dim=0, dim_size=num_atoms.shape[0])  # (num_res, token_dim)
         return A_i, Q_l, C_l, P_lm
-    
+
 
 class AtomAttentionDecoder(nn.Module):
 
-    def __init__(self, atom_dim, atom_pair_dim, N_block, N_head, token_dim):
+    def __init__(self, atom_dim, atom_pair_dim, N_block, N_head, token_dim, atom_gat_positions, N_head_gat):
         super(AtomAttentionDecoder, self).__init__()
         self.diffusion_transformer = DiffusionTransformer(atom_dim, atom_dim, atom_pair_dim, N_block, N_head)
-        
+
         self.linear_no_bias_token2atom = LinearNoBias(token_dim, atom_dim)
 
-    def forward(self, a_i, q_l_skip, c_l_skip, p_lm_skip, atom2residue, edge):
+        self.atom_gat0 = OptionalGAT(atom_gat_positions[0], atom_dim, N_head_gat)
+        self.atom_gat1 = OptionalGAT(atom_gat_positions[1], atom_dim, N_head_gat)
+
+    def forward(self, a_i, q_l_skip, c_l_skip, p_lm_skip, atom2residue, edge, euclidian_atom_edge):
         q_l = self.linear_no_bias_token2atom(a_i[atom2residue]) + q_l_skip
+
+        q_l = self.atom_gat0(q_l, euclidian_atom_edge)
+
         q_l = self.diffusion_transformer(q_l, c_l_skip, p_lm_skip, edge)
+
+        q_l = self.atom_gat1(q_l, euclidian_atom_edge)
 
         return q_l

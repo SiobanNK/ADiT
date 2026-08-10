@@ -7,7 +7,7 @@ from adit.models.net.adit.pairformer import SimplePairFormer
 from adit.models.net.adit.seq_embedder import SeqEmbedder
 from adit.models.net.adit.relative_position_encoder import RelativePositionEncoding
 from adit.models.net.adit.diffusion_module import DiffusionModule
-from adit.models.net.adit.utils import generate_sparse_attention_edge_batch, generate_dense_attention_edge_batch
+from adit.models.net.adit.utils import generate_sparse_attention_edge_batch, generate_dense_attention_edge_batch, atom_euclidian_edge_index, token_euclidian_edge_index
 
 
 class ADiT(nn.Module):
@@ -19,7 +19,8 @@ class ADiT(nn.Module):
         N_query = 32, N_key = 128, dropout = 0.0,
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
-        token_coord_encoder = None
+        token_coord_encoder = None,
+        max_atom_neighbour_dist = 5., max_token_neighbour_dist = 10., atom_gat_positions = (False,False), token_gat_positions = (False,False)
     ):
         super(ADiT, self).__init__()
         # basic
@@ -33,13 +34,18 @@ class ADiT(nn.Module):
         self.N_query = N_query
         self.N_key = N_key
 
+        # euclidian attention
+        self.max_atom_neighbour_dist = max_atom_neighbour_dist
+        self.max_token_neighbour_dist = max_token_neighbour_dist
+
         # modules
         self.seq_embedder = SeqEmbedder(self.token_dim, dropout = dropout, esm_weight_path = esm_weight_path, esm_model = esm_model)
         self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout, token_coord_encoder=token_coord_encoder)
         self.simple_pair_former = SimplePairFormer(token_dim, token_pair_dim)
         self.diffusion_module = DiffusionModule(
             atom_dim, atom_pair_dim, token_dim, token_pair_dim,
-            N_block_atom, N_head_atom, N_block_token, N_head_token
+            N_block_atom, N_head_atom, N_block_token, N_head_token,
+            atom_gat_positions, token_gat_positions
         )
 
     def forward(self, batch):
@@ -78,6 +84,9 @@ class ADiT(nn.Module):
         num_atoms = batch["atom_mask"].sum(-1)[token_mask].int()
         atom2token = torch.arange(num_tokens.sum(), device=device).repeat_interleave(num_atoms)
 
+        euclidian_atom_edges = atom_euclidian_edge_index(num_atoms, atom_coordinates, self.max_atom_neighbour_dist)
+        euclidian_token_edges = token_euclidian_edge_index(token_edges, atom_coordinates, atom2token, self.max_token_neighbour_dist)
+
         # relative position encoding: token2chain, token_idx
         token_idx = batch["token_idx"][token_mask]
         token2chain = batch["chain_index"][token_mask]
@@ -92,7 +101,8 @@ class ADiT(nn.Module):
         out_atom_feat = self.diffusion_module(
             token_feat, token_pair_feat,
             atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms,
-            atom_edges, token_edges, token_edges_matrix
+            atom_edges, token_edges, token_edges_matrix,
+            euclidian_atom_edges, euclidian_token_edges
         )
         batch["atom_feat"] = out_atom_feat
 

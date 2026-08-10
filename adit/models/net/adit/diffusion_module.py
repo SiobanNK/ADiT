@@ -4,49 +4,57 @@ from torch import nn
 from adit.models.net.adit.common import Transition, LinearNoBias
 from adit.models.net.adit.atom_attention import AtomAttentionEncoder, AtomAttentionDecoder
 from adit.models.net.adit.diffusion_transformer import DiffusionTransformer
+from adit.models.net.adit.token_graph import OptionalGAT
 
 
 class DiffusionModule(nn.Module):
 
-    def __init__(self, atom_dim, atom_pair_dim, token_dim, token_pair_dim, 
-                 N_block_atom, N_head_atom, N_block_token, N_head_token, dropout=0.0):
+    def __init__(self, atom_dim, atom_pair_dim, token_dim, token_pair_dim,
+                 N_block_atom, N_head_atom, N_block_token, N_head_token,
+                 atom_gat_positions, token_gat_positions, N_head_gat=1, dropout=0.0):
         super(DiffusionModule, self).__init__()
         self.diffusion_conditioning = DiffusionConditioning(token_dim, token_pair_dim)
         self.atom_attention_encoder = AtomAttentionEncoder(
             atom_dim, atom_pair_dim, N_block_atom, N_head_atom, token_dim, token_pair_dim, dropout=dropout
         )
-        
+
         self.linear_no_bias_0 = LinearNoBias(token_dim, token_dim)
         self.layernorm_0 = nn.LayerNorm(token_dim)
         self.diffusion_transformer = DiffusionTransformer(
             token_dim, token_dim, token_pair_dim, N_block_token, N_head_token
         )
         self.layernorm_1 = nn.LayerNorm(token_dim)
-        
+
         self.atom_attention_decoder = AtomAttentionDecoder(
-            atom_dim, atom_pair_dim, N_block_atom, N_head_atom, token_dim
+            atom_dim, atom_pair_dim, N_block_atom, N_head_atom, token_dim, atom_gat_positions, N_head_gat
         )
 
+        self.token_gat0 = OptionalGAT(token_gat_positions[0], token_dim, N_head_gat)
+        self.token_gat1 = OptionalGAT(token_gat_positions[1], token_dim, N_head_gat)
+
     def forward(self, token_feat, token_pair_feat,
-                atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms, 
-                edge, edge_token, edge_matrix_token):
+                atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms,
+                edge, edge_token, edge_matrix_token,
+                euclidian_atom_edge, euclidian_token_edge):
         # conditioning
         token_feat, token_pair_feat = self.diffusion_conditioning(token_feat, token_pair_feat)
-        
+
         # Sequence-local Atom Attention and aggregation to coarse-grained tokens
         a_i, q_l_skip, c_l_skip, p_lm_skip = self.atom_attention_encoder(
-            atom_name, atomic_number, atom_belong_to_protein, atom_coordinates, 
-            atom2token, num_atoms, edge, token_feat, token_pair_feat, edge_matrix_token
+            atom_name, atomic_number, atom_belong_to_protein, atom_coordinates,
+            atom2token, num_atoms, edge, token_feat, token_pair_feat, edge_matrix_token,
         )
 
         # Full self-attention on token level
         a_i = a_i + self.linear_no_bias_0(self.layernorm_0(token_feat))
-        a_i = self.layernorm_1(self.diffusion_transformer(
+        a_i = self.token_gat0(a_i, euclidian_token_edge)
+        a_i = self.diffusion_transformer(
             a_i, token_feat, token_pair_feat, edge_token
-        ))
+        )
+        a_i = self.layernorm_1(self.token_gat1(a_i, euclidian_token_edge))
 
         # Broadcast token activations to atoms and run Sequence-local Atom Attention
-        q_l = self.atom_attention_decoder(a_i, q_l_skip, c_l_skip, p_lm_skip, atom2token, edge)
+        q_l = self.atom_attention_decoder(a_i, q_l_skip, c_l_skip, p_lm_skip, atom2token, edge, euclidian_atom_edge)
         return q_l
 
 

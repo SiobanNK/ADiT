@@ -32,6 +32,40 @@ def generate_sparse_attention_edge_batch(num_tokens, num_atoms_per_token, N_quer
     edge = torch.nonzero(adj).transpose(0, 1)
     return edge
 
+
+def generate_sparse_euclidian_attention_matrix(dist_matrix, max_neighbour_dist, device):
+    """
+    Generate a sparse binary adjacency matrix.
+    """
+    num_nodes = dist_matrix.shape[0]
+    adj = torch.zeros((num_nodes, num_nodes), device=device, dtype=torch.bool)
+    adj[dist_matrix < max_neighbour_dist] = 1
+    return adj
+
+def generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist):
+    """
+    Generate sparse attention edge batch.
+    Nodes are atoms or tokens.
+    """
+    device = dist_matrix.device
+    batch_size = dist_matrix.shape[0]
+
+    adjs = (generate_sparse_euclidian_attention_matrix(dist_matrix[i], max_neighbour_dist, device) for i in range(batch_size))
+    adj = torch.block_diag(*adjs)
+    edge = torch.nonzero(adj).transpose(0, 1)
+    return edge
+
+def atom_euclidian_edge_index(num_atoms, atom_coordinates, max_neighbour_dist: float = 5.):
+    dense_edges = generate_dense_attention_edge_batch(num_atoms)
+    dist_matrix = ((atom_coordinates[dense_edges[0]] - atom_coordinates[dense_edges[1]]) ** 2).sum(dim=-1).sqrt()
+    return generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist)
+
+def token_euclidian_edge_index(token_edges, atom_coordinates, atom2token, max_neighbour_dist: float = 11.):
+    token_coordinates = scatter_mean(atom_coordinates, atom2token, dim=0)
+    dist_matrix = ((token_coordinates[token_edges[0]] - token_coordinates[token_edges[1]]) ** 2).sum(dim=-1).sqrt()
+    return generate_sparse_euclidian_attention_edge_batch(dist_matrix, max_neighbour_dist)
+
+
 def generate_dense_attention_matrix(num_token, device):
     """
     Generate a dense attention matrix.
@@ -52,6 +86,8 @@ def generate_dense_attention_edge_batch(num_tokens):
                                    values=torch.arange(edge.shape[1], device=device),
                                    size=[adj.shape[0], adj.shape[1]]).to_dense()
     return adj, edge
+
+
 
 class LinearNoBias(nn.Linear):
     def __init__(self, in_features, out_features):
