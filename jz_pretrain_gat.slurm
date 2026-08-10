@@ -69,7 +69,7 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    +model.gat \
+    +model@model.net=gat \
     ++net.atom_gat_positions=ATOM_GAT_ACTIVATION    \
     ++net.token_gat_positions=TOKEN_GAT_ACTIVATION \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \

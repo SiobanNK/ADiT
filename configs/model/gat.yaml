@@ -1,4 +1,4 @@
-# @package net
+# @package model.net
 atom_neighbour_radius: 5.0
 token_neighbour_radius: 10.0
 atom_gat_positions: [False, False]
