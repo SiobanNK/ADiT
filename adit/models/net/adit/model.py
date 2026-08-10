@@ -20,7 +20,7 @@ class ADiT(nn.Module):
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
         token_coord_encoder = None,
-        max_atom_neighbour_dist = 5., max_token_neighbour_dist = 10., atom_gat_positions = (False,False), token_gat_positions = (False,False)
+        max_atom_neighbour_dist = 0., max_token_neighbour_dist = 0., atom_gat_positions = (False,False), token_gat_positions = (False,False)
     ):
         super(ADiT, self).__init__()
         # basic
@@ -84,8 +84,14 @@ class ADiT(nn.Module):
         num_atoms = batch["atom_mask"].sum(-1)[token_mask].int()
         atom2token = torch.arange(num_tokens.sum(), device=device).repeat_interleave(num_atoms)
 
-        euclidian_atom_edges = atom_euclidian_edge_index(num_atoms, atom_coordinates, self.max_atom_neighbour_dist)
-        euclidian_token_edges = token_euclidian_edge_index(token_edges, atom_coordinates, atom2token, self.max_token_neighbour_dist)
+        if self.max_atom_neighbour_dist > 0.0:
+            euclidian_atom_edges = atom_euclidian_edge_index(num_atoms, atom_coordinates, self.max_atom_neighbour_dist)
+        else:
+            euclidian_atom_edges = None
+        if self.max_atom_neighbour_dist > 0.0:
+            euclidian_token_edges = token_euclidian_edge_index(token_edges, atom_coordinates, atom2token, self.max_token_neighbour_dist)
+        else:
+            euclidian_token_edges = None
 
         # relative position encoding: token2chain, token_idx
         token_idx = batch["token_idx"][token_mask]

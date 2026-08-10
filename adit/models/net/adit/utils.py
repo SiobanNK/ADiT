@@ -1,6 +1,8 @@
 # utils
 import torch
 from torch import nn
+from torch_scatter import scatter_mean
+
 
 def generate_sparse_attention_matrix(num_atom, N_query, N_key, device):
     """

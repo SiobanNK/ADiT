@@ -1,5 +1,4 @@
 from torch import nn
-from adit.models.net.adit import scatter_mean
 from torch_geometric.nn import GATv2Conv
 
 
