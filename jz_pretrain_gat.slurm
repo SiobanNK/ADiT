@@ -22,7 +22,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 
 EPOCHS=3
 

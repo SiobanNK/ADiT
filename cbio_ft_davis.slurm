@@ -50,16 +50,16 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_${SIZE} \
-    ++trainer.max_epochs=10 \
-    ++dataset.transform.truncate_length=300 \
-    ++task_name=${DATA}_${SIZE}_truncate300\
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.dropout=0.2 \
+    trainer.max_epochs=10 \
+    data.dataset.transform.truncate_length=300 \
+    task_name=${DATA}_${SIZE}_truncate300\
+    +model.net.token_coord_encoder=$COORD_ENCODING \
+    model.net.dropout=0.2 \
     ckpt_path=$CKPT_PATH \
-    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
+    trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
-    ++logger.wandb.project=$DATA
+    logger.wandb.name=${DATA}_truncate300_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    logger.wandb.project=$DATA
 
         # ++model.net.d_max=$D_MAX \

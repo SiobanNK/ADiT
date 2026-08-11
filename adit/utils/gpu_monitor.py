@@ -2,6 +2,7 @@ import os
 import threading
 from typing import Dict, List, Optional
 
+import torch
 import lightning as L
 from lightning import Callback
 from lightning.pytorch.loggers import WandbLogger
@@ -32,6 +33,14 @@ class JobGPUMonitor(Callback):
 
     Bypasses W&B's default `system.gpu.*` metrics, which report every GPU
     on the node regardless of job allocation.
+
+    NVML enumerates GPUs by their physical node index (e.g. 2, 5 if
+    CUDA_VISIBLE_DEVICES="2,5"), while PyTorch always renumbers visible
+    devices starting from 0 in CUDA_VISIBLE_DEVICES order (torch device 0 ==
+    physical GPU 2, torch device 1 == physical GPU 5 in that example). All
+    `my_gpu/gpu{i}/*` keys are keyed by the physical (NVML) index, but the
+    underlying torch.cuda.* calls are made with the correctly remapped torch
+    index — see `_nvml_to_torch`.
     """
 
     def __init__(self, interval: float = 15.0) -> None:
@@ -81,12 +90,25 @@ class JobGPUMonitor(Callback):
             log.warning("Could not resolve assigned GPU indices, skipping GPU monitor.")
             return
 
+        nvml_to_torch = self._build_nvml_to_torch_map(gpu_indices)
+        if not nvml_to_torch:
+            log.warning(
+                "Could not map any NVML index to a torch device index "
+                "(mismatch between CUDA_VISIBLE_DEVICES and torch.cuda.device_count()); "
+                "torch_* memory metrics will be skipped."
+            )
+
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
-            target=self._log_loop, args=(trainer, loggers, gpu_indices, self._stop_event), daemon=True
+            target=self._log_loop,
+            args=(trainer, loggers, gpu_indices, nvml_to_torch, self._stop_event),
+            daemon=True,
         )
         self._thread.start()
-        log.info(f"Started JobGPUMonitor on physical GPU indices {gpu_indices}")
+        log.info(
+            f"Started JobGPUMonitor on physical GPU indices {gpu_indices} "
+            f"(nvml->torch map: {nvml_to_torch})"
+        )
 
     def _stop(self) -> None:
         if self._stop_event is not None:
@@ -113,17 +135,61 @@ class JobGPUMonitor(Callback):
                     pass
         return []
 
-    def _log_loop(self, trainer: L.Trainer, loggers: list, gpu_indices: List[int], stop_event: threading.Event) -> None:
+    @staticmethod
+    def _build_nvml_to_torch_map(gpu_indices: List[int]) -> Dict[int, int]:
+        """Maps physical/NVML GPU index -> torch device index.
+
+        Relies on CUDA_VISIBLE_DEVICES order: torch always renumbers visible
+        devices starting at 0, in the order they appear in that variable.
+        `gpu_indices` is assumed to already be in that same order (see
+        `_resolve_gpu_indices`).
+        """
+        try:
+            torch_count = torch.cuda.device_count()
+        except Exception as e:
+            log.warning(f"torch.cuda.device_count() failed: {e}")
+            return {}
+
+        if torch_count != len(gpu_indices):
+            log.warning(
+                f"torch sees {torch_count} device(s) but resolved {len(gpu_indices)} "
+                f"physical GPU indices ({gpu_indices}); torch_* metrics will only be "
+                f"attached to the first {min(torch_count, len(gpu_indices))} of them."
+            )
+
+        return {
+            nvml_idx: torch_idx
+            for torch_idx, nvml_idx in enumerate(gpu_indices)
+            if torch_idx < torch_count
+        }
+
+    def _log_loop(
+        self,
+        trainer: L.Trainer,
+        loggers: list,
+        gpu_indices: List[int],
+        nvml_to_torch: Dict[int, int],
+        stop_event: threading.Event,
+    ) -> None:
         pynvml.nvmlInit()
-        handles = {i: pynvml.nvmlDeviceGetHandleByIndex(i) for i in gpu_indices}
+        handles = {i: pynvml.nvmlDeviceGetHandleByIndex(i) for i in gpu_indices}  # index physiques du noeud
 
         # Fixed key set, computed once: guarantees every logged dict has the
-        # exact same schema regardless of which per-GPU NVML calls succeed or
-        # fail on a given iteration.
+        # exact same schema regardless of which per-GPU NVML/torch calls
+        # succeed or fail on a given iteration. Must include every suffix
+        # that _log_loop can possibly set below, torch_* included.
         metric_keys = [
             f"my_gpu/gpu{i}/{suffix}"
             for i in gpu_indices
-            for suffix in ("utilization_pct", "memory_used_MB", "memory_total_MB", "memory_used_pct")
+            for suffix in (
+                "utilization_pct",
+                "memory_used_MB",
+                "memory_total_MB",
+                "memory_used_pct",
+                "torch_allocated_MB",
+                "torch_reserved_MB",
+                "torch_max_allocated_MB",
+            )
         ] + ["my_gpu/avg_utilization_pct", "my_gpu/avg_memory_used_pct"]
 
         while not stop_event.is_set():
@@ -144,8 +210,22 @@ class JobGPUMonitor(Callback):
                     util_vals.append(util.gpu)
                     mem_pct_vals.append(mem_used_pct)
                 except Exception as e:
-                    log.warning(f"GPU monitor failed on index {i}: {e}")
-                    # Keep the default NaN for this GPU; the key stays present.
+                    log.warning(f"GPU monitor (NVML) failed on physical index {i}: {e}")
+                    # Keep the default NaN for this GPU; the keys stay present.
+
+                # torch_* metrics live in a separate try/except: an NVML
+                # failure above must not prevent torch stats from being
+                # collected, and vice versa.
+                t_idx = nvml_to_torch.get(i)
+                if t_idx is not None:
+                    try:
+                        metrics[f"my_gpu/gpu{i}/torch_allocated_MB"] = torch.cuda.memory_allocated(t_idx) / 1024**2
+                        metrics[f"my_gpu/gpu{i}/torch_reserved_MB"] = torch.cuda.memory_reserved(t_idx) / 1024**2
+                        metrics[f"my_gpu/gpu{i}/torch_max_allocated_MB"] = (
+                            torch.cuda.max_memory_allocated(t_idx) / 1024**2
+                        )
+                    except Exception as e:
+                        log.warning(f"GPU monitor (torch) failed on physical index {i} (torch idx {t_idx}): {e}")
 
             if util_vals:
                 metrics["my_gpu/avg_utilization_pct"] = sum(util_vals) / len(util_vals)
