@@ -3,7 +3,7 @@
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=10:00:00
+#SBATCH --time=15:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
@@ -50,7 +50,6 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_${SIZE} \
-    trainer.max_epochs=10 \
     data.dataset.transform.truncate_length=300 \
     task_name=${DATA}_${SIZE}_truncate300\
     +model.net.token_coord_encoder=$COORD_ENCODING \

@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain_null
+#SBATCH --job-name=pretrain_rbf
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=20:00:00
+#SBATCH --time=50:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-##SBATCH --cpus-per-task=1
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:A40:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -17,9 +17,11 @@
 
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
-DATA="pretrain_adit_data"
+ADIT_SIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+COORD_ENCODING="rbf"     # onehot , rbf , null
+D_MAX=22
+EPOCHS=33
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -41,9 +43,14 @@ set -x
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
-    experiment=new_denoise_S_pdb_fixed_0_5 \
-    trainer.devices=1 \
+    experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.d_max=$D_MAX \
+    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
+    ++trainer.min_epochs=$EPOCHS \
+    ++trainer.max_epochs=$EPOCHS \
+    ++task_name=denoising_${ADIT_SIZE}_${COORD_ENCODING}_d$D_MAX \
     logger=many_loggers \
-    ++logger.wandb.name=pretrain_${COORD_ENCODING} \
-    ++logger.wandb.id=pretrain_${COORD_ENCODING}_${SLURM_JOB_ID}
+    ++logger.wandb.name=pretrain_${COORD_ENCODING}_d$D_MAX \
+    ++logger.wandb.id=pretrain_${COORD_ENCODING}_d$D_MAX_$SLURM_JOB_ID \
+    ++logger.wandb.project="pretrain"
