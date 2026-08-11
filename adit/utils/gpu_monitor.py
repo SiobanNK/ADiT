@@ -38,9 +38,20 @@ class JobGPUMonitor(Callback):
     CUDA_VISIBLE_DEVICES="2,5"), while PyTorch always renumbers visible
     devices starting from 0 in CUDA_VISIBLE_DEVICES order (torch device 0 ==
     physical GPU 2, torch device 1 == physical GPU 5 in that example). All
-    `my_gpu/gpu{i}/*` keys are keyed by the physical (NVML) index, but the
-    underlying torch.cuda.* calls are made with the correctly remapped torch
-    index — see `_nvml_to_torch`.
+    `my_gpu/gpu{i}/*` keys are keyed by the physical (NVML) index.
+
+    IMPORTANT limitation on torch_* metrics: this callback only runs on rank
+    0, and torch.cuda.memory_allocated/reserved are *per-process* counters,
+    not GPU-wide like NVML's mem.used. In standard multi-GPU DDP (one
+    process per GPU), rank 0 only ever allocates on its own local device —
+    so querying torch.cuda.memory_allocated() for a *different* rank's GPU
+    from rank 0 would silently return 0, not the real usage on that card
+    (NVML's memory_used_MB/pct remain accurate for every GPU regardless).
+    To avoid logging a misleading "0 MB used" for GPUs owned by other
+    ranks, torch_* metrics are only populated for the single physical GPU
+    that rank 0 itself uses (torch.cuda.current_device()); all other GPUs
+    keep torch_* as NaN, and NVML metrics remain the source of truth for
+    them.
     """
 
     def __init__(self, interval: float = 15.0) -> None:
@@ -90,24 +101,24 @@ class JobGPUMonitor(Callback):
             log.warning("Could not resolve assigned GPU indices, skipping GPU monitor.")
             return
 
-        nvml_to_torch = self._build_nvml_to_torch_map(gpu_indices)
-        if not nvml_to_torch:
+        local_nvml_idx = self._resolve_local_nvml_index(gpu_indices)
+        if local_nvml_idx is None:
             log.warning(
-                "Could not map any NVML index to a torch device index "
+                "Could not determine which physical GPU is local to rank 0 "
                 "(mismatch between CUDA_VISIBLE_DEVICES and torch.cuda.device_count()); "
-                "torch_* memory metrics will be skipped."
+                "torch_* memory metrics will be skipped for all GPUs."
             )
 
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
             target=self._log_loop,
-            args=(trainer, loggers, gpu_indices, nvml_to_torch, self._stop_event),
+            args=(trainer, loggers, gpu_indices, local_nvml_idx, self._stop_event),
             daemon=True,
         )
         self._thread.start()
         log.info(
             f"Started JobGPUMonitor on physical GPU indices {gpu_indices} "
-            f"(nvml->torch map: {nvml_to_torch})"
+            f"(torch_* metrics limited to physical GPU {local_nvml_idx}, rank 0's own device)"
         )
 
     def _stop(self) -> None:
@@ -136,39 +147,38 @@ class JobGPUMonitor(Callback):
         return []
 
     @staticmethod
-    def _build_nvml_to_torch_map(gpu_indices: List[int]) -> Dict[int, int]:
-        """Maps physical/NVML GPU index -> torch device index.
+    def _resolve_local_nvml_index(gpu_indices: List[int]) -> Optional[int]:
+        """Returns the physical/NVML index of the single GPU rank 0 actually
+        uses (torch.cuda.current_device()), or None if it can't be resolved.
 
         Relies on CUDA_VISIBLE_DEVICES order: torch always renumbers visible
         devices starting at 0, in the order they appear in that variable.
         `gpu_indices` is assumed to already be in that same order (see
-        `_resolve_gpu_indices`).
+        `_resolve_gpu_indices`), so gpu_indices[torch_idx] gives the physical
+        index for a given torch device index.
         """
         try:
-            torch_count = torch.cuda.device_count()
+            torch_idx = torch.cuda.current_device()
         except Exception as e:
-            log.warning(f"torch.cuda.device_count() failed: {e}")
-            return {}
+            log.warning(f"torch.cuda.current_device() failed: {e}")
+            return None
 
-        if torch_count != len(gpu_indices):
+        if torch_idx >= len(gpu_indices):
             log.warning(
-                f"torch sees {torch_count} device(s) but resolved {len(gpu_indices)} "
-                f"physical GPU indices ({gpu_indices}); torch_* metrics will only be "
-                f"attached to the first {min(torch_count, len(gpu_indices))} of them."
+                f"torch.cuda.current_device()={torch_idx} is out of range for resolved "
+                f"physical GPU indices {gpu_indices}; CUDA_VISIBLE_DEVICES and torch's "
+                f"view of devices appear inconsistent."
             )
+            return None
 
-        return {
-            nvml_idx: torch_idx
-            for torch_idx, nvml_idx in enumerate(gpu_indices)
-            if torch_idx < torch_count
-        }
+        return gpu_indices[torch_idx]
 
     def _log_loop(
         self,
         trainer: L.Trainer,
         loggers: list,
         gpu_indices: List[int],
-        nvml_to_torch: Dict[int, int],
+        local_nvml_idx: Optional[int],
         stop_event: threading.Event,
     ) -> None:
         pynvml.nvmlInit()
@@ -213,19 +223,21 @@ class JobGPUMonitor(Callback):
                     log.warning(f"GPU monitor (NVML) failed on physical index {i}: {e}")
                     # Keep the default NaN for this GPU; the keys stay present.
 
-                # torch_* metrics live in a separate try/except: an NVML
-                # failure above must not prevent torch stats from being
-                # collected, and vice versa.
-                t_idx = nvml_to_torch.get(i)
-                if t_idx is not None:
+                # torch_* metrics are only meaningful for rank 0's own GPU
+                # (see class docstring): torch.cuda.memory_allocated() is a
+                # per-process counter, so querying it for a GPU owned by a
+                # different rank would silently report 0, not real usage.
+                # Every other GPU keeps torch_* as NaN; NVML above already
+                # gives an accurate memory_used_MB/pct for them.
+                if i == local_nvml_idx:
                     try:
-                        metrics[f"my_gpu/gpu{i}/torch_allocated_MB"] = torch.cuda.memory_allocated(t_idx) / 1024**2
-                        metrics[f"my_gpu/gpu{i}/torch_reserved_MB"] = torch.cuda.memory_reserved(t_idx) / 1024**2
+                        metrics[f"my_gpu/gpu{i}/torch_allocated_MB"] = torch.cuda.memory_allocated() / 1024**2
+                        metrics[f"my_gpu/gpu{i}/torch_reserved_MB"] = torch.cuda.memory_reserved() / 1024**2
                         metrics[f"my_gpu/gpu{i}/torch_max_allocated_MB"] = (
-                            torch.cuda.max_memory_allocated(t_idx) / 1024**2
+                            torch.cuda.max_memory_allocated() / 1024**2
                         )
                     except Exception as e:
-                        log.warning(f"GPU monitor (torch) failed on physical index {i} (torch idx {t_idx}): {e}")
+                        log.warning(f"GPU monitor (torch) failed on rank 0's own GPU (physical index {i}): {e}")
 
             if util_vals:
                 metrics["my_gpu/avg_utilization_pct"] = sum(util_vals) / len(util_vals)

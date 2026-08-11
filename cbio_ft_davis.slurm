@@ -55,6 +55,7 @@ srun python "$RUN_SCRIPT" \
     task_name=${DATA}_${SIZE}_truncate300\
     +model.net.token_coord_encoder=$COORD_ENCODING \
     model.net.dropout=0.2 \
+    data.batch_size=12 \
     ckpt_path=$CKPT_PATH \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
