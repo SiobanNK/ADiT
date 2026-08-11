@@ -3,7 +3,7 @@
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=50:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
@@ -18,7 +18,7 @@ RUN_SCRIPT="./adit/train.py"
 DATA="davis"
 SIZE="S"
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
 D_MAX=20
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
@@ -50,9 +50,10 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_${SIZE} \
-    ++task_name=${DATA}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    ++trainer.max_epochs=10 \
+    ++dataset.transform.truncate_length=300 \
+    ++task_name=${DATA}_${SIZE}_truncate300\
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.d_max=$D_MAX \
     ++model.net.dropout=0.2 \
     ckpt_path=$CKPT_PATH \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
@@ -60,3 +61,5 @@ srun python "$RUN_SCRIPT" \
     ++logger.wandb.name=${DATA}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
     ++logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
     ++logger.wandb.project=$DATA
+
+        # ++model.net.d_max=$D_MAX \

@@ -16,6 +16,7 @@ class OptionalGAT(nn.Module):
         residual: bool = True
     ):
         super().__init__()
+        self.active = active
 
         if active:
             # Handle out_channels logic dynamically based on concat mode
