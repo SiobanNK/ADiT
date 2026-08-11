@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain_rbf
+#SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
 #SBATCH --array=1   # ,2,8,9,16
@@ -70,13 +70,13 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     +model@model.net=gat \
-    ++net.atom_gat_positions=ATOM_GAT_ACTIVATION    \
-    ++net.token_gat_positions=TOKEN_GAT_ACTIVATION \
+    ++net.atom_gat_positions=$ATOM_GAT_ACTIVATION    \
+    ++net.token_gat_positions=$TOKEN_GAT_ACTIVATION \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++trainer.min_epochs=$EPOCHS \
     ++trainer.max_epochs=$EPOCHS \
-    ++task_name=GAT_denoising_${ADIT_SIZE}_${COORD_ENCODING} \
+    ++task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat_pretrain_${COORD_ENCODING} \
-    ++logger.wandb.id=gat_pretrain_${COORD_ENCODING}_$SLURM_JOB_ID \
+    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_pretrain\
+    ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
