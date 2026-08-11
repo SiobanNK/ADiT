@@ -70,12 +70,12 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     +model@model.net=gat \
-    ++net.atom_gat_positions=$ATOM_PARAM    \
-    ++net.token_gat_positions=$TOKEN_PARAM \
-    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
-    ++trainer.min_epochs=$EPOCHS \
-    ++trainer.max_epochs=$EPOCHS \
-    ++task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
+    model.net.atom_gat_positions=$ATOM_PARAM    \
+    model.net.token_gat_positions=$TOKEN_PARAM \
+    trainer.devices=$SLURM_NTASKS_PER_NODE \
+    trainer.min_epochs=$EPOCHS \
+    trainer.max_epochs=$EPOCHS \
+    task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
     ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_pretrain\
     ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
