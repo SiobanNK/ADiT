@@ -22,7 +22,7 @@ def compute_token_coordinates(atom_coordinates, atom2token):
 
 class RelativePositionEncoding(nn.Module):
 
-    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None, d_min = 0.0, d_max = 50.0):
+    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None, d_min = 2.0, d_max = 50.0):
         super(RelativePositionEncoding, self).__init__()
         self.q_max = q_max if token_coord_encoder else -1
         self.r_max = r_max
@@ -38,14 +38,14 @@ class RelativePositionEncoding(nn.Module):
         self.d_min = d_min
         self.d_max = d_max
 
-    def rbf(self, d, device="cpu"):
+    def rbf(self, dist, device="cpu"):
         # angstrom
         rbf_dim = self.q_max + 1
 
         d_mu = torch.linspace(self.d_min, self.d_max, rbf_dim, device=device) # [0.0000,  0.7812,  1.5625, ...]
         d_mu = d_mu.view([1, -1])   # [[ 0.0000,  0.7812,  1.5625, ...]]
         d_sigma = (self.d_max - self.d_min) / rbf_dim
-        d_expand = torch.unsqueeze(d, -1) # [[[0.0];[0.7812];[1.5625];...]] column
+        d_expand = torch.unsqueeze(dist, -1) # [[[0.0];[0.7812];[1.5625];...]] column
 
         rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)    # size : (65, 1, 1, N)
         return rbf
@@ -62,7 +62,7 @@ class RelativePositionEncoding(nn.Module):
                 a_ij_rel_3d = create_one_hot_encoding(d_ij_3d, self.q_max + 1)
 
             elif self.token_coord_encoder == "rbf" :
-                a_ij_rel_3d = self.rbf(dist, self.d_max, device=token_idx.device)
+                a_ij_rel_3d = self.rbf(dist, device=token_idx.device)
 
             else:
                 raise ValueError(
