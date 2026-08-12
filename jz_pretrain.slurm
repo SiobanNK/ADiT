@@ -54,7 +54,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.d_max=$D_MAX \
+    ++model.net.relative_position_d_max=$D_MAX \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++trainer.min_epochs=$EPOCHS \
     ++trainer.max_epochs=$EPOCHS \

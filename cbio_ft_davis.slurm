@@ -3,7 +3,7 @@
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=15:00:00
+#SBATCH --time=20:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
@@ -19,7 +19,7 @@ DATA="davis"
 SIZE="S"
 
 COORD_ENCODING="null"     # onehot , rbf , null
-D_MAX=20
+D_MAX=120
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"

@@ -3,7 +3,7 @@
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=50:00:00
+#SBATCH --time=100:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
@@ -46,6 +46,7 @@ srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ++model.net.token_coord_encoder=$COORD_ENCODING \
     ++model.net.relative_position_d_max=$D_MAX \
+    data.batch_size=12 \
     ++trainer.devices=$SLURM_NTASKS_PER_NODE \
     ++trainer.min_epochs=$EPOCHS \
     ++trainer.max_epochs=$EPOCHS \
