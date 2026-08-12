@@ -1,48 +1,48 @@
 #!/bin/bash
-<<<<<<< HEAD
-#SBATCH --job-name=pretrain
-=======
-#SBATCH --job-name=pretrain_rbf
->>>>>>> tokenpos
-#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --job-name=pretrain_gat
+#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --array=5,10,7,15
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-<<<<<<< HEAD
-#SBATCH --ntasks-per-node=4
-#SBATCH --gres=gpu:4
-=======
 #SBATCH --ntasks-per-node=2
 #SBATCH --gres=gpu:2
->>>>>>> tokenpos
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-<<<<<<< HEAD
-#SBATCH --time=99:00:00
-=======
-#SBATCH --time=50:00:00
->>>>>>> tokenpos
-#SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+#SBATCH --time=05:00:00
+#SBATCH --qos=qos_gpu_h100-t3    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 
-<<<<<<< HEAD
-=======
-COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=22
 EPOCHS=33
 
->>>>>>> tokenpos
+CKPT="outputs/pretrain_gat/gat${SLURM_ARRAY_TASK_ID}_denoising_XS/checkpoints/last.ckpt"
+
+# Définition des 4 options pour ATOM et 4 options pour TOKEN
+ATOM_LIST=(
+  "[False,False]" "[True,False]" "[False,True]" "[True,True]"
+)
+TOKEN_LIST=(
+  "[False,False]" "[True,False]" "[False,True]" "[True,True]"
+)
+
+# Conversion de SLURM_ARRAY_TASK_ID (0 à 15) en 2 index (0 à 3)
+ATOM_IDX=$(( SLURM_ARRAY_TASK_ID / 4 ))
+TOKEN_IDX=$(( SLURM_ARRAY_TASK_ID % 4 ))
+
+ATOM_PARAM=${ATOM_LIST[$ATOM_IDX]}
+TOKEN_PARAM=${TOKEN_LIST[$TOKEN_IDX]}
+
 # ---- Welcome...
 echo '-------------------------------------'
 echo "[$0] >>> Start : $(date '+%d/%m/%Y-%H:%M:%S')"
@@ -57,17 +57,9 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-<<<<<<< HEAD
 # module load pytorch-gpu/py3/2.5.0
 # source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
-=======
-<<<<<<< HEAD:jz_esm.slurm
-module load miniforge/25.9.1
-=======
-source ~/.bashrc
->>>>>>> tokenpos:jz_pretrain.slurm
->>>>>>> tokenpos
 conda deactivate
 conda activate $WORK/envs/adit
 # ---- Run it...
@@ -75,27 +67,18 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
-<<<<<<< HEAD
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
+    ckpt_path=CKPT \
+    +model.net.atom_neighbour_radius="5.0" \
+    +model.net.token_neighbour_radius="10.0" \
+    +model.net.atom_gat_positions=$ATOM_PARAM    \
+    +model.net.token_gat_positions=$TOKEN_PARAM \
+    trainer.devices=$SLURM_NTASKS_PER_NODE \
+    trainer.min_epochs=$EPOCHS \
+    trainer.max_epochs=$EPOCHS \
+    task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=pretrain \
-    ++logger.wandb.id=pretrain_$SLURM_JOB_ID
-=======
-<<<<<<< HEAD:jz_esm.slurm
-srun python "$RUN_SCRIPT"
-=======
-srun python "$RUN_SCRIPT" \
-    experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.relative_position_d_max=$D_MAX \
-    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
-    ++trainer.min_epochs=$EPOCHS \
-    ++trainer.max_epochs=$EPOCHS \
-    ++task_name=denoising_${ADIT_SIZE}_${COORD_ENCODING}_d$D_MAX \
-    logger=many_loggers \
-    ++logger.wandb.name=pretrain_${COORD_ENCODING}_d$D_MAX \
-    ++logger.wandb.id=pretrain_${COORD_ENCODING}_d$D_MAX_$SLURM_JOB_ID \
+    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_pretrain\
+    ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
->>>>>>> tokenpos:jz_pretrain.slurm
->>>>>>> tokenpos

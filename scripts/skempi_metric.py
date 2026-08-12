@@ -31,6 +31,32 @@ def load_pkl(fpaths: list[str]):
     return accession_codes, all_pred, all_target
 
 
+import io
+
+class CPU_Unpickler(pkl.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        return super().find_class(module, name)
+
+def load_pkl_cpu(fpaths: list[str]):
+    accession_codes = []
+    all_pred = []
+    all_target = []
+
+    for fpath in fpaths:
+        with open(fpath, "rb") as f:
+            accession_code, pred, target = CPU_Unpickler(f).load()
+
+        accession_codes += accession_code
+        all_pred.append(pred.cpu())
+        all_target.append(target.cpu())
+
+    all_pred = torch.concat(all_pred, dim=-1)
+    all_target = torch.concat(all_target, dim=-1)
+    return accession_codes, all_pred, all_target
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input_dir", type=str)
 args = parser.parse_known_args()[0]
@@ -42,7 +68,7 @@ if __name__ == "__main__":
         os.path.join(input_dir, "result_split_1.pkl"),
         os.path.join(input_dir, "result_split_2.pkl"),
     ]
-    accession_codes, all_pred, all_target = load_pkl(result_paths)
+    accession_codes, all_pred, all_target = load_pkl_cpu(result_paths)
     metrics = {}
     metrics["overall_pearsonr"] = pearsonr(all_pred, all_target)
     metrics["overall_spearmanr"] = spearmanr(all_pred, all_target)

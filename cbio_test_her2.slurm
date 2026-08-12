@@ -5,7 +5,11 @@
 #SBATCH --mem=15G
 #SBATCH --time=00:15:00
 #SBATCH --partition=cbio-gpu
+<<<<<<< HEAD
 #SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+=======
+#SBATCH --gres=gpu:T4:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+>>>>>>> tokenpos
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1               # default 1, typically 4 or 5 - do not use more
 #SBATCH --mail-type=END                 # Send email at job completion
@@ -24,10 +28,23 @@
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/test.py"
 DATA="her2"
+<<<<<<< HEAD
 FINETUNING_DATE="2026-06-19"
 FINETUNING="skempi_S_split_0_11-49-13"
 ADIT_SIZE="S"
 
+=======
+# FINETUNING_DATE="2026-06-19"
+# FINETUNING="skempi_S_split_0_11-49-13"
+ADIT_SIZE="S"
+
+COORD_ENCODING="onehot"
+EPOCH=33
+
+FINETUNED_CKPT="outputs/${COORD_ENCODING}/epoch_${EPOCH}/skempi0_S/checkpoints/last.ckpt"
+SAVE_FILE="outputs/${COORD_ENCODING}/epoch_${EPOCH}/result_${DATA}_${ADIT_SIZE}.pkl"
+
+>>>>>>> tokenpos
 # ---- Welcome...
 echo '-------------------------------------'
 echo "[$0] >>> Start : $(date '+%d/%m/%Y-%H:%M:%S')"
@@ -50,11 +67,20 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
+<<<<<<< HEAD
     data=$DATA \
     ++trainer.devices=1 \
     ++data.batch_size=1 \
     ++model.save_file=result_${DATA}_$ADIT_SIZE.pkl \
     ckpt_path=outputs/${FINETUNING_DATE}/${FINETUNING}/checkpoints/last.ckpt \
+=======
+    ++model.net.token_coord_encoder=$COORD_ENCODING \
+    data=$DATA \
+    task_name=${DATA}_$ADIT_SIZE \
+    ++data.batch_size=1 \
+    ++model.save_file=$SAVE_FILE \
+    ckpt_path=$FINETUNED_CKPT \
+>>>>>>> tokenpos
     logger=many_loggers \
     ++logger.wandb.name=${DATA}_${ADIT_SIZE} \
     ++logger.wandb.id=${DATA}_${ADIT_SIZE}_${SLURM_JOB_ID}

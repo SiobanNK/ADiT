@@ -1,27 +1,45 @@
 #!/bin/bash
+<<<<<<< HEAD
 #SBATCH --job-name=lba
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
+=======
+#SBATCH --job-name=lba_rbf
+#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x%a_%j.err
+#SBATCH --array=30,60
+>>>>>>> tokenpos
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
+<<<<<<< HEAD
 #SBATCH --ntasks-per-node=2
 #SBATCH --gres=gpu:2
+=======
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:1
+>>>>>>> tokenpos
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
+<<<<<<< HEAD
 #SBATCH --time=20:00:00
 ## SBATCH --qos=qos_cpu-dev     # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+=======
+#SBATCH --time=10:00:00
+#SBATCH --qos=qos_gpu_h100-t3    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+>>>>>>> tokenpos
 
 
 # Protein - Ligand : "lba"
 # Drug - Target : "davis"
 # Protein - Protein : "skempi"
+<<<<<<< HEAD
 # Antibody-Antigen : "her2"
 
 
@@ -30,6 +48,27 @@ RUN_SCRIPT="./adit/train.py"
 DATA="$SLURM_JOB_NAME"
 ADIT_SIZE="S"
 IDENTITY=30 # 30, 60
+=======
+
+RUN_DIR="$SCRATCH/ADiT"
+RUN_SCRIPT="./adit/train.py"
+
+DATA="lba"
+SIZE="S"
+IDENTITY="$SLURM_ARRAY_TASK_ID"
+if [[ "$IDENTITY" -eq 30 ]]; then
+    DROPOUT=0.0
+    EPOCHS=3 # total: 3 epochs
+else    # IDENTITY=60
+    DROPOUT=0.5
+    EPOCHS=99
+fi  # cf article
+
+COORD_ENCODING="rbf"     # onehot , rbf , null
+
+CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
+CKPT_PATH="./outputs/2026-08-02/denoising_S_rbf_11-15-08/checkpoints/last.ckpt"
+>>>>>>> tokenpos
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -45,6 +84,10 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
+<<<<<<< HEAD
+=======
+# module load pytorch-gpu/py3/2.5.0
+>>>>>>> tokenpos
 # source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
 conda deactivate
@@ -54,6 +97,7 @@ cd "$RUN_DIR"
 set -x
 echo 'Launching script'
 
+<<<<<<< HEAD
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_$ADIT_SIZE \
     task_name=${DATA}_${ADIT_SIZE} \
@@ -66,3 +110,18 @@ srun python "$RUN_SCRIPT" \
     ++logger.wandb.id=$SLURM_JOB_ID
 
 # trainer.devices : S : 2, M : 4, L : 4
+=======
+python "$RUN_SCRIPT" \
+    experiment=${DATA}_$SIZE \
+    ++data.dataset.split_identity_threshold=identity_$IDENTITY \
+    ++task_name=${DATA}${IDENTITY}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    ++model.net.token_coord_encoder=$COORD_ENCODING \
+    ++model.net.dropout=$DROPOUT \
+    ++trainer.max_epochs=$EPOCHS \
+    ckpt_path=$CKPT_PATH \
+    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
+    logger=many_loggers \
+    ++logger.wandb.name=${DATA}${IDENTITY}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    ++logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    ++logger.wandb.project=$DATA
+>>>>>>> tokenpos
