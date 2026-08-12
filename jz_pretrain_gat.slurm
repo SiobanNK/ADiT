@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=pretrain_gat
-#SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=15,2,8,1,3,12,10   # ,2,8,9,16
+#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
+#SBATCH --array=4,5,6,7,11,16         # 15,2,8,1,3,12,10
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 

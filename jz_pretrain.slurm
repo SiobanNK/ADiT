@@ -41,8 +41,6 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-# module load pytorch-gpu/py3/2.5.0
-# source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
 conda deactivate
 conda activate $WORK/envs/adit
