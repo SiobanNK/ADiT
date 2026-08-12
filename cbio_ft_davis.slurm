@@ -3,12 +3,12 @@
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
 #SBATCH --mem=45G
-#SBATCH --time=20:00:00
+#SBATCH --time=48:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
 #SBATCH --gres=gpu:A40:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -19,7 +19,6 @@ DATA="davis"
 SIZE="S"
 
 COORD_ENCODING="null"     # onehot , rbf , null
-D_MAX=120
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
