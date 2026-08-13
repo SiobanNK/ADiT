@@ -73,7 +73,6 @@ source ~/.bashrc
 conda activate adit
 # ---- Run it...
 cd "$RUN_DIR"
-<<<<<<< HEAD
 echo 'Launching script'
 
 
@@ -96,19 +95,3 @@ srun python "$RUN_SCRIPT" \
 
 
 # trainer.devices : S : 2, M : 4, L : 4
-=======
-set -x
-echo 'Launching script'
-
-srun python "$RUN_SCRIPT" \
-    experiment=${DATA}_S \
-    data.dataset.test_split=split_$SPLIT \
-    ++task_name=${DATA}${SPLIT}_S_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.d_max=$D_MAX \
-    ckpt_path=$CKPT_PATH \
-    logger=many_loggers \
-    ++logger.wandb.name=${DATA}${SPLIT}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++logger.wandb.id=${DATA}${SPLIT}_${COORD_ENCODING}_${SLURM_JOB_ID} \
-    ++logger.wandb.project=${DATA}
->>>>>>> tokenpos

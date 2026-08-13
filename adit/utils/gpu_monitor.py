@@ -1,18 +1,11 @@
 import os
 import threading
-<<<<<<< HEAD
-from typing import List, Optional
-
-import lightning as L
-from lightning import Callback
-=======
 from typing import Dict, List, Optional
 
 import torch
 import lightning as L
 from lightning import Callback
 from lightning.pytorch.loggers import WandbLogger
->>>>>>> tokenpos
 
 from adit.utils import RankedLogger
 
@@ -27,12 +20,6 @@ except ImportError:
 class JobGPUMonitor(Callback):
     """Logs utilization/memory for every GPU assigned to this SLURM job
     (as many as CUDA_VISIBLE_DEVICES lists), from a single process (rank 0),
-<<<<<<< HEAD
-    to whatever logger(s) are configured (W&B, TensorBoard, CSV, ...).
-    Bypasses W&B's default `system.gpu.*` metrics, which report every GPU
-    on the node regardless of job allocation, and works identically when
-    W&B isn't used at all.
-=======
     to W&B specifically.
 
     Only W&B is targeted (not CSVLogger/TensorBoardLogger/etc.): this callback
@@ -65,7 +52,6 @@ class JobGPUMonitor(Callback):
     that rank 0 itself uses (torch.cuda.current_device()); all other GPUs
     keep torch_* as NaN, and NVML metrics remain the source of truth for
     them.
->>>>>>> tokenpos
     """
 
     def __init__(self, interval: float = 15.0) -> None:
@@ -93,12 +79,6 @@ class JobGPUMonitor(Callback):
         if not trainer.is_global_zero:
             return  # rank 0 polls every GPU of the job; other ranks do nothing
 
-<<<<<<< HEAD
-        loggers = trainer.loggers if hasattr(trainer, "loggers") else [trainer.logger]
-        loggers = [lg for lg in loggers if lg is not None]
-        if not loggers:
-            log.warning("No logger configured, skipping GPU monitor.")
-=======
         # Avoid starting a second thread if one is already running (e.g. if
         # on_fit_start/on_test_start ever fire back-to-back without an
         # intervening on_fit_end/on_test_end).
@@ -114,7 +94,6 @@ class JobGPUMonitor(Callback):
         loggers = [lg for lg in all_loggers if isinstance(lg, WandbLogger)]
         if not loggers:
             log.warning("No W&B logger configured, skipping GPU monitor.")
->>>>>>> tokenpos
             return
 
         gpu_indices = self._resolve_gpu_indices()
@@ -122,14 +101,6 @@ class JobGPUMonitor(Callback):
             log.warning("Could not resolve assigned GPU indices, skipping GPU monitor.")
             return
 
-<<<<<<< HEAD
-        self._stop_event = threading.Event()
-        self._thread = threading.Thread(
-            target=self._log_loop, args=(trainer, loggers, gpu_indices, self._stop_event), daemon=True
-        )
-        self._thread.start()
-        log.info(f"Started JobGPUMonitor on physical GPU indices {gpu_indices}")
-=======
         local_nvml_idx = self._resolve_local_nvml_index(gpu_indices)
         if local_nvml_idx is None:
             log.warning(
@@ -149,18 +120,14 @@ class JobGPUMonitor(Callback):
             f"Started JobGPUMonitor on physical GPU indices {gpu_indices} "
             f"(torch_* metrics limited to physical GPU {local_nvml_idx}, rank 0's own device)"
         )
->>>>>>> tokenpos
 
     def _stop(self) -> None:
         if self._stop_event is not None:
             self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=5)
-<<<<<<< HEAD
-=======
         self._thread = None
         self._stop_event = None
->>>>>>> tokenpos
 
     @staticmethod
     def _resolve_gpu_indices() -> List[int]:
@@ -179,13 +146,6 @@ class JobGPUMonitor(Callback):
                     pass
         return []
 
-<<<<<<< HEAD
-    def _log_loop(self, trainer: L.Trainer, loggers: list, gpu_indices: List[int], stop_event: threading.Event) -> None:
-        pynvml.nvmlInit()
-        handles = {i: pynvml.nvmlDeviceGetHandleByIndex(i) for i in gpu_indices}
-        while not stop_event.is_set():
-            metrics = {}
-=======
     @staticmethod
     def _resolve_local_nvml_index(gpu_indices: List[int]) -> Optional[int]:
         """Returns the physical/NVML index of the single GPU rank 0 actually
@@ -246,32 +206,10 @@ class JobGPUMonitor(Callback):
             metrics: Dict[str, float] = {k: float("nan") for k in metric_keys}
             util_vals, mem_pct_vals = [], []
 
->>>>>>> tokenpos
             for i, handle in handles.items():
                 try:
                     util = pynvml.nvmlDeviceGetUtilizationRates(handle)
                     mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-<<<<<<< HEAD
-                    metrics[f"my_gpu/gpu{i}/utilization_pct"] = util.gpu
-                    metrics[f"my_gpu/gpu{i}/memory_used_MB"] = mem.used / 1024**2
-                    metrics[f"my_gpu/gpu{i}/memory_total_MB"] = mem.total / 1024**2
-                    metrics[f"my_gpu/gpu{i}/memory_used_pct"] = 100 * mem.used / mem.total   # <-- new
-                except Exception as e:
-                    log.warning(f"GPU monitor failed on index {i}: {e}")
-            if metrics:
-                metrics["my_gpu/avg_utilization_pct"] = sum(
-                    v for k, v in metrics.items() if k.endswith("utilization_pct") and "avg" not in k
-                ) / len(gpu_indices)
-                metrics["my_gpu/avg_memory_used_pct"] = sum(
-                    v for k, v in metrics.items() if k.endswith("memory_used_pct")
-                ) / len(gpu_indices)
-                step = trainer.global_step
-                for lg in loggers:
-                    try:
-                        lg.log_metrics(metrics, step=step)
-                    except Exception as e:
-                        log.warning(f"Failed to log GPU metrics to {type(lg).__name__}: {e}")
-=======
                     mem_used_pct = 100 * mem.used / mem.total
 
                     metrics[f"my_gpu/gpu{i}/utilization_pct"] = util.gpu
@@ -313,6 +251,5 @@ class JobGPUMonitor(Callback):
                 except Exception as e:
                     log.warning(f"Failed to log GPU metrics to {type(lg).__name__}: {e}")
 
->>>>>>> tokenpos
             stop_event.wait(self.interval)
         pynvml.nvmlShutdown()

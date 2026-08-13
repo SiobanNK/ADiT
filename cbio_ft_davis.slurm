@@ -40,11 +40,7 @@ echo "Script : $RUN_SCRIPT"
 echo "Run in : $RUN_DIR"
 echo '--------- --------------------------'
 # ---- Module
-<<<<<<< HEAD
-source /cluster/CBIO/home/snieradzikkozic/miniconda3/etc/profile.d/conda.sh
-=======
 source ~/.bashrc
->>>>>>> tokenpos
 conda activate adit
 # ---- Run it...
 cd "$RUN_DIR"
@@ -52,26 +48,11 @@ set -x
 echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
-<<<<<<< HEAD
-    experiment=${DATA}_$ADIT_SIZE \
-    data=$DATA \
-    task_name=${DATA}_${ADIT_SIZE} \
-    ++trainer.devices=2 \
-    ++data.batch_size=8 \
-    ++data.dataset.split_seed=seed_1 \
-    ckpt_path=ckpts/adit_$ADIT_SIZE.ckpt \
-    logger=wandb \
-    ++logger.wandb.name=${DATA}_$ADIT_SIZE \
-    ++logger.wandb.id=${DATA}_$ADIT_SIZE_$SLURM_JOB_ID
-
-# trainer.devices : S : 2, M : 4, L : 4
-=======
     experiment=${DATA}_${SIZE} \
     data.dataset.transform.truncate_length=300 \
     task_name=${DATA}_${SIZE}_truncate300\
     +model.net.token_coord_encoder=$COORD_ENCODING \
     model.net.dropout=0.2 \
-    data.batch_size=12 \
     ckpt_path=$CKPT_PATH \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
@@ -80,4 +61,3 @@ srun python "$RUN_SCRIPT" \
     logger.wandb.project=$DATA
 
         # ++model.net.d_max=$D_MAX \
->>>>>>> tokenpos
