@@ -2,27 +2,27 @@
 #SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0,5,7,9,10,13,14,15
+#SBATCH --array=14
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
-#SBATCH --gres=gpu:2
+#SBATCH --ntasks-per-node=3
+#SBATCH --gres=gpu:3
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=05:00:00
-#SBATCH --qos=qos_gpu_h100-t3    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+#SBATCH --time=50:00:00
+#SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="XS"
+ADIT_SIZE="S"
 
 EPOCHS=33
 
@@ -57,8 +57,6 @@ echo '--------- --------------------------'
 # ---- Module
 module purge
 module load arch/h100
-# module load pytorch-gpu/py3/2.5.0
-# source $SCRATCH/envs/adit/bin/activate
 source ~/.bashrc
 conda deactivate
 conda activate $WORK/envs/adit
@@ -69,7 +67,6 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    ckpt_path=$CKPT \
     +model.net.atom_neighbour_radius="5.0" \
     +model.net.token_neighbour_radius="10.0" \
     +model.net.atom_gat_positions=$ATOM_PARAM    \
@@ -79,6 +76,6 @@ srun python "$RUN_SCRIPT" \
     trainer.max_epochs=$EPOCHS \
     task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_pretrain\
+    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain\
     ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
