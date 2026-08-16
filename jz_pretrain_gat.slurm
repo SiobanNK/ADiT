@@ -2,31 +2,31 @@
 #SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=14
+#SBATCH --array=0,7,10,13,14,15
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=3
-#SBATCH --gres=gpu:3
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:2
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=50:00:00
-#SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+#SBATCH --time=05:00:00
+#SBATCH --qos=qos_gpu_h100-t3    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 
 EPOCHS=33
 
-CKPT="outputs/pretrain_gat/gat${SLURM_ARRAY_TASK_ID}_denoising_XS/checkpoints/last.ckpt"
+CKPT="outputs/pretrain_gat_phase2/gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE}/checkpoints/last.ckpt"
 
 # Définition des 4 options pour ATOM et 4 options pour TOKEN
 ATOM_LIST=(
@@ -67,6 +67,7 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
+    ckpt_path=$CKPT \
     +model.net.atom_neighbour_radius="5.0" \
     +model.net.token_neighbour_radius="10.0" \
     +model.net.atom_gat_positions=$ATOM_PARAM    \
