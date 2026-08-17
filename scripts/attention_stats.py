@@ -52,7 +52,7 @@ def print_stats(deg: torch.Tensor, name: str):
     )
 
 def save_figure(all_atom_degrees, all_token_degrees, dataset: str, output_dir: str):
-    fig, axes = plt.subplots(2,figsize=(6, 8))
+    fig, axes = plt.subplots(2,figsize=(8, 8))
     fig.suptitle(f"Distribution des voisins — {dataset} (tous batches confondus)")
 
     if all_atom_degrees:
@@ -81,8 +81,12 @@ def save_histogram(ax, deg: torch.Tensor, name: str):
     deg_np = deg.cpu().numpy()
     mean, median = deg_np.mean(), float(torch.tensor(deg_np).median())
 
-    bins = int(deg_np.max() - deg_np.min() + 1)
-    ax.hist(deg_np, bins=bins, edgecolor="black", alpha=0.75)
+    lo, hi = int(deg_np.min()), int(deg_np.max())
+    bin_edges = torch.arange(lo - 0.5, hi + 1.5, 1).numpy()  # edges à k-0.5, k+0.5, ...
+
+    ax.hist(deg_np, bins=bin_edges, edgecolor="black", alpha=0.75)
+    ax.set_xticks(range(lo, hi + 1))  # un tick par valeur entière possible
+
     ax.axvline(mean, color="red", linestyle="--", label=f"mean={mean:.1f}")
     ax.axvline(median, color="green", linestyle="--", label=f"median={median:.1f}")
     ax.set_xlabel("Nombre de voisins")
