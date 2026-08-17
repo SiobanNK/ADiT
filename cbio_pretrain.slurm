@@ -20,7 +20,7 @@ RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=22.0
+D_MAX=2.2.0
 EPOCHS=33
 
 # ---- Welcome...

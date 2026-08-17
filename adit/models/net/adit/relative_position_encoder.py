@@ -8,8 +8,8 @@ def create_one_hot_encoding(x, class_count):
 
 def compute_token_coordinates(atom_coordinates, atom2token):
     """
-    Atom coordinates are already centered and rescaled to the unit : angstrom (cf file data/components/feature_transform.py)
-    Taille d'une protéine : 100 - 1000 angtroms.
+    Atom coordinates are already centered and rescaled to the unit : nm (cf file data/components/feature_transform.py)
+    Taille d'une protéine : 100 - 1000 angtroms = 10 - 100 nm.
     Pour avoir 64 classes : tokens classés de distance n°0 à distance n°64, puis classe n°65 correspond aux tokens plus éloignés dans une même chaîne.
     Si les 65 premières classes couvrent les distances 0 - 500 angstroms:
         500 / 65 = environ 8 = environ 10
@@ -22,7 +22,7 @@ def compute_token_coordinates(atom_coordinates, atom2token):
 
 class RelativePositionEncoding(nn.Module):
 
-    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None, d_min = 2.0, d_max = 50.0):
+    def __init__(self, token_pair_dim, q_max = 64, r_max = 32, s_max = 2, dropout = 0.0, token_coord_encoder = None, d_min = 0.2, d_max = 2.2):
         super(RelativePositionEncoding, self).__init__()
         self.q_max = q_max if token_coord_encoder else -1
         self.r_max = r_max

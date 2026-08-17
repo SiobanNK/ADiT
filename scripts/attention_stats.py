@@ -8,7 +8,9 @@ generate_token_coordinates.
 Usage (à adapter selon vos overrides Hydra, cf. train.sh) :
 
     python attention_stats.py experiment=lba_S ++data.batch_size=16 \
-        +model.net.atom_neighbour_radius=5.0 +model.net.token_neighbour_radius=10.0 n_batches=20
+        +model.net.atom_neighbour_radius=0.5 +model.net.token_neighbour_radius=1.0 n_batches=20
+
+ATTENTION ! Les coordonnées sont converties en nm (cf config).
 
 Si atom_neighbour_radius / token_neighbour_radius ne sont pas passés en
 argument, on essaie de les lire depuis cfg.model (mêmes noms que dans le
@@ -148,6 +150,7 @@ def main(cfg: DictConfig) -> None:
                 num_atoms_per_token = batch["atom_mask"].sum(-1)[token_mask].int()
                 atom2token = torch.arange(num_tokens.sum(), device='cpu').repeat_interleave(num_atoms_per_token)
                 token_coordinates = generate_token_coordinates(atom_coordinates, atom2token)
+                print(token_coordinates)
                 token_edges = generate_euclidian_edge_index(
                     num_tokens, token_coordinates, token_neighbour_radius
                 )

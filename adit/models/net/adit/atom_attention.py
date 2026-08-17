@@ -48,7 +48,7 @@ class AtomAttentionEncoder(nn.Module):
         self.layernorm_tokenpair = nn.LayerNorm(token_pair_dim)
         self.dropout = nn.Dropout(dropout)
 
-    def rbf(self, d, d_min=0.0, d_max=2.0, device="cpu"):
+    def rbf(self, d, d_min=0.2, d_max=2.2, device="cpu"):
         # We'll use nm instead of angstorm here.
         d_mu = torch.linspace(d_min, d_max, self.rbf_dim, device=device)
         d_mu = d_mu.view([1, -1])

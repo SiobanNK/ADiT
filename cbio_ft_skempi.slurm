@@ -20,7 +20,7 @@ DATA="skempi"
 SPLIT="$SLURM_ARRAY_TASK_ID"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=22
+D_MAX=2.2
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 CKPT_PATH="ckpts/${COORD_ENCODING}/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"

@@ -19,7 +19,7 @@ class ADiT(nn.Module):
         N_query = 32, N_key = 128, dropout = 0.0,
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
-        token_coord_encoder = None, relative_position_d_max = 22.0,
+        token_coord_encoder = None, relative_position_d_max = 2.2,
         atom_neighbour_radius = 0., token_neighbour_radius = 0., atom_gat_positions = (False,False), token_gat_positions = (False,False)
     ):
         super(ADiT, self).__init__()

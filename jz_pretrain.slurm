@@ -8,8 +8,8 @@
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
-#SBATCH --gres=gpu:2
+#SBATCH --ntasks-per-node=3
+#SBATCH --gres=gpu:3
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
@@ -24,7 +24,7 @@ RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=22
+D_MAX=2.2
 EPOCHS=33
 
 # ---- Welcome...

@@ -20,7 +20,7 @@ IDENTITY=30
 SIZE="S"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=22
+D_MAX=2.2
 
 EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
 # CKPT_PATH="outputs/${COORD_ENCODING}/epoch_${EPOCH}/${DATA}${IDENTITY}_${SIZE}_d22/checkpoints/last.ckpt"
