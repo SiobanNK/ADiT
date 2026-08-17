@@ -97,7 +97,6 @@ class AtomAttentionEncoder(nn.Module):
         P_lm = P_lm + self.mlp_P_lm(P_lm)
 
         Q_l = self.diffusion_transformer(Q_l, C_l, P_lm, edge)  # (num_atom, atom_dim)
-        # Q_l = self.GAT(Q_l, atom_coordinates)
 
         # Mean pooling for each residue
         A_i = scatter_mean(self.relu(self.linear_no_bias_Q_l(Q_l)), atom2token, dim=0, dim_size=num_atoms.shape[0])  # (num_res, token_dim)

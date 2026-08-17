@@ -68,8 +68,8 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     ckpt_path=$CKPT \
-    +model.net.atom_neighbour_radius="5.0" \
-    +model.net.token_neighbour_radius="10.0" \
+    +model.net.atom_neighbour_radius="0.5" \
+    +model.net.token_neighbour_radius="1.0" \
     +model.net.atom_gat_positions=$ATOM_PARAM    \
     +model.net.token_gat_positions=$TOKEN_PARAM \
     trainer.devices=$SLURM_NTASKS_PER_NODE \

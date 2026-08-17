@@ -22,6 +22,7 @@ import torch
 import hydra
 import rootutils
 from omegaconf import DictConfig
+import numpy as np
 from torch_geometric.utils import degree
 
 import matplotlib
@@ -52,7 +53,7 @@ def print_stats(deg: torch.Tensor, name: str):
     )
 
 def save_figure(all_atom_degrees, all_token_degrees, dataset: str, output_dir: str):
-    fig, axes = plt.subplots(2,figsize=(8, 8))
+    fig, axes = plt.subplots(2,figsize=(6, 8))
     fig.suptitle(f"Distribution des voisins — {dataset} (tous batches confondus)")
 
     if all_atom_degrees:
@@ -77,15 +78,20 @@ def save_figure(all_atom_degrees, all_token_degrees, dataset: str, output_dir: s
     print(f"[{dataset}] histogramme sauvegardé -> {save_path}")
 
 
-def save_histogram(ax, deg: torch.Tensor, name: str):
+def save_histogram(ax, deg: torch.Tensor, name: str, max_ticks: int = 7):
     deg_np = deg.cpu().numpy()
     mean, median = deg_np.mean(), float(torch.tensor(deg_np).median())
 
     lo, hi = int(deg_np.min()), int(deg_np.max())
-    bin_edges = torch.arange(lo - 0.5, hi + 1.5, 1).numpy()  # edges à k-0.5, k+0.5, ...
+    bin_edges = np.arange(lo - 0.5, hi + 1.5, 1)  # un bin par entier, centré sur k
 
     ax.hist(deg_np, bins=bin_edges, edgecolor="black", alpha=0.75)
-    ax.set_xticks(range(lo, hi + 1))  # un tick par valeur entière possible
+
+    # au plus max_ticks ticks, répartis uniformément sur [lo, hi] et arrondis
+    # à des entiers pour rester cohérent avec des comptes de voisins
+    n_ticks = min(max_ticks, hi - lo + 1)
+    ticks = np.unique(np.round(np.linspace(lo, hi, n_ticks)).astype(int))
+    ax.set_xticks(ticks)
 
     ax.axvline(mean, color="red", linestyle="--", label=f"mean={mean:.1f}")
     ax.axvline(median, color="green", linestyle="--", label=f"median={median:.1f}")
@@ -127,7 +133,8 @@ def main(cfg: DictConfig) -> None:
 
             atom_coordinates = batch["atom_positions"][atom_mask]
             num_tokens = batch["seq_mask"].sum(dim=-1)
-            num_atoms = batch["atom_mask"].sum(-1)[token_mask].int()
+            # num_atoms = batch["atom_mask"].sum(-1)[token_mask].int() # nb per token, not molecule !
+            num_atoms = batch["atom_mask"].sum(dim=(1,2)).int()
 
             if atom_neighbour_radius > 0.0:
                 atom_edges = generate_euclidian_edge_index(
@@ -138,7 +145,8 @@ def main(cfg: DictConfig) -> None:
                     all_atom_degrees.append(deg)
 
             if token_neighbour_radius > 0.0:
-                atom2token = torch.arange(num_tokens.sum(), device='cpu').repeat_interleave(num_atoms)
+                num_atoms_per_token = batch["atom_mask"].sum(-1)[token_mask].int()
+                atom2token = torch.arange(num_tokens.sum(), device='cpu').repeat_interleave(num_atoms_per_token)
                 token_coordinates = generate_token_coordinates(atom_coordinates, atom2token)
                 token_edges = generate_euclidian_edge_index(
                     num_tokens, token_coordinates, token_neighbour_radius
@@ -154,20 +162,6 @@ def main(cfg: DictConfig) -> None:
     dataset_path = Path(cfg.data.dataset.get("path_to_dataset"))
     dataset = dataset_path.name
     save_figure(all_atom_degrees, all_token_degrees, dataset, output_dir)
-
-# if all_atom_degrees:
-#     atom_degrees = torch.cat(all_atom_degrees)
-#     print_stats(atom_degrees, "atom")
-#     save_histogram(atom_degrees, "atom", dataset, output_dir)
-# else:
-#     print("[atom] atom_neighbour_radius <= 0 ou aucune arête -> rien à calculer")
-
-# if all_token_degrees:
-#     token_degrees = torch.cat(all_token_degrees)
-#     print_stats(token_degrees, "token")
-#     save_histogram(token_degrees, "token", dataset, output_dir)
-# else:
-#     print("[token] token_neighbour_radius <= 0 ou aucune arête -> rien à calculer")
 
 
 if __name__ == "__main__":

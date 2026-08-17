@@ -85,7 +85,8 @@ class ADiT(nn.Module):
         atom2token = torch.arange(num_tokens.sum(), device=device).repeat_interleave(num_atoms)
 
         if self.atom_neighbour_radius > 0.0:
-            euclidian_atom_edges = generate_euclidian_edge_index(num_atoms, atom_coordinates, self.atom_neighbour_radius)
+            num_atoms_per_molecule = batch["atom_mask"].sum(dim=(1,2)).int()    # atom number per molecule, not per token
+            euclidian_atom_edges = generate_euclidian_edge_index(num_atoms_per_molecule, atom_coordinates, self.atom_neighbour_radius)
         else:
             euclidian_atom_edges = None
         if self.token_neighbour_radius > 0.0:
