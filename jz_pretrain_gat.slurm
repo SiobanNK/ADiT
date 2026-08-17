@@ -2,7 +2,7 @@
 #SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0-15 # 0,7,10,13,14,15
+#SBATCH --array=0,5,9,10,11,13,14,15
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -22,7 +22,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="XS"
+ADIT_SIZE="S"
 
 EPOCHS=33
 
