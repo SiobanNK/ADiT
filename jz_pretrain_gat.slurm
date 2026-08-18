@@ -67,7 +67,6 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    ckpt_path=$CKPT \
     +model.net.atom_neighbour_radius="0.5" \
     +model.net.token_neighbour_radius="1.0" \
     +model.net.atom_gat_positions=$ATOM_PARAM    \
