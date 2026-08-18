@@ -22,7 +22,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 
 EPOCHS=33
 
@@ -67,6 +67,7 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
+    ckpt_path=$CKPT \
     +model.net.atom_neighbour_radius="0.5" \
     +model.net.token_neighbour_radius="1.0" \
     +model.net.atom_gat_positions=$ATOM_PARAM    \
@@ -76,6 +77,6 @@ srun python "$RUN_SCRIPT" \
     trainer.max_epochs=$EPOCHS \
     task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain_nm\
+    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain2_nm\
     ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
