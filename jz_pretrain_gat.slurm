@@ -23,7 +23,7 @@
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="XS"
-GNN_TYPE='gcn'  # gcn / gat
+GNN_TYPE='gat'  # gcn / gat
 
 EPOCHS=33
 
@@ -68,13 +68,12 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    +model/gnn=gat \
-    model.net.gnn_type=$GNN_TYPE \
+    +model/gnn=$GNN_TYPE \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
-    task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
+    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain2_nm\
-    ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}\
+    ++logger.wandb.id=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"

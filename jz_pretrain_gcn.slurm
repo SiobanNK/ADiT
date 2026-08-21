@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain_gat
+#SBATCH --job-name=pretrain_gcn
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0,7,10,13,14,15
+##SBATCH --array=0,5,9,10,11,13,14,15
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -23,34 +23,26 @@
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="XS"
+GNN_TYPE='gcn'  # gcn / gat
 
 EPOCHS=33
 
 CKPT="outputs/pretrain_gat_phase2/gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE}/checkpoints/last.ckpt"
 
-# Nombre à convertir (0-64), sur 8 bits ici -> adapte NBITS si besoin
-NUM=$SLURM_ARRAY_TASK_ID
-NBITS=8
+# Définition des 4 options pour ATOM et 4 options pour TOKEN
+ATOM_LIST=(
+  "[False,False]" "[True,False]" "[False,True]" "[True,True]"
+)
+TOKEN_LIST=(
+  "[False,False]" "[True,False]" "[False,True]" "[True,True]"
+)
 
-# Conversion en binaire, complété par des zéros à gauche
-BIN=$(printf '%0*d' "$NBITS" "$(echo "obase=2;$NUM" | bc)")
+# Conversion de SLURM_ARRAY_TASK_ID (0 à 15) en 2 index (0 à 3)
+ATOM_IDX=$(( SLURM_ARRAY_TASK_ID / 4 ))
+TOKEN_IDX=$(( SLURM_ARRAY_TASK_ID % 4 ))
 
-# Construction de la liste Hydra-compatible [False, True, ...]
-LIST="["
-for (( i=0; i<${#BIN}; i++ )); do
-    bit=${BIN:$i:1}
-    if [ "$bit" = "1" ]; then
-        LIST+="True"
-    else
-        LIST+="False"
-    fi
-    if [ $i -lt $((${#BIN}-1)) ]; then
-        LIST+=","
-    fi
-done
-LIST+="]"
-
-echo "Nombre: $NUM -> Binaire: $BIN -> Liste: $LIST"
+ATOM_PARAM=${ATOM_LIST[$ATOM_IDX]}
+TOKEN_PARAM=${TOKEN_LIST[$TOKEN_IDX]}
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -76,19 +68,12 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    ckpt_path=$CKPT \
-    +model/gnn=gat \
-    model.gnn_positions=$LIST \
+    +model/gnn=$GNN_TYPE \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
-    task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
+    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain_nm\
-    ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}\
+    ++logger.wandb.id=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
-
-    # +model.net.atom_neighbour_radius="0.5" \
-    # +model.net.token_neighbour_radius="1.0" \
-    # +model.net.atom_gat_positions=$ATOM_PARAM    \
-    # +model.net.token_gat_positions=$TOKEN_PARAM \
