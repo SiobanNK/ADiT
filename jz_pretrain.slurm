@@ -21,7 +21,7 @@
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 
 COORD_ENCODING="rbf"     # onehot , rbf , null
 D_MAX=2.2

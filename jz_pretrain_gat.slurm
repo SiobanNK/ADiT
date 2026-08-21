@@ -2,7 +2,7 @@
 #SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err     # ${SLURM_ARRAY_TASK_ID}
-#SBATCH --array=0,7,10,13,14,15
+##SBATCH --array=0,5,9,10,11,13,14,15
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -75,6 +75,6 @@ srun python "$RUN_SCRIPT" \
     trainer.max_epochs=$EPOCHS \
     task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain_nm\
+    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain2_nm\
     ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
