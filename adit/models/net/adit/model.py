@@ -20,7 +20,7 @@ class ADiT(nn.Module):
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
         token_coord_encoder = None, relative_position_d_max = 2.2,
-        atom_neighbour_radius = 0., token_neighbour_radius = 0., atom_gat_positions = (False,False), token_gat_positions = (False,False)
+        atom_neighbour_radius = 0., token_neighbour_radius = 0., gnn_positions = (False,False,False,False,False,False), gnn_type="gat"
     ):
         super(ADiT, self).__init__()
         # basic
@@ -45,7 +45,7 @@ class ADiT(nn.Module):
         self.diffusion_module = DiffusionModule(
             atom_dim, atom_pair_dim, token_dim, token_pair_dim,
             N_block_atom, N_head_atom, N_block_token, N_head_token,
-            atom_gat_positions, token_gat_positions
+            gnn_positions, gnn_type, token_neighbour_radius
         )
 
     def forward(self, batch):
@@ -86,14 +86,15 @@ class ADiT(nn.Module):
 
         if self.atom_neighbour_radius > 0.0:
             num_atoms_per_molecule = batch["atom_mask"].sum(dim=(1,2)).int()    # atom number per molecule, not per token
-            euclidian_atom_edges = generate_euclidian_edge_index(num_atoms_per_molecule, atom_coordinates, self.atom_neighbour_radius)
+            euclidian_atom_edges, euclidian_atom_edge_feat = generate_euclidian_edge_index(num_atoms_per_molecule, atom_coordinates, self.atom_neighbour_radius)
         else:
-            euclidian_atom_edges = None
+            euclidian_atom_edges, euclidian_atom_edge_feat = None, None
         if self.token_neighbour_radius > 0.0:
-            token_coordinates = generate_token_coordinates(atom_coordinates, atom2token)
-            euclidian_token_edges = generate_euclidian_edge_index(num_tokens, token_coordinates, self.token_neighbour_radius)
+            atom_positions = batch["atom_positions"][token_mask]    # (B,L,37,3)
+            token_coordinates = generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, T = "centroid")
+            euclidian_token_edges, euclidian_token_edge_feat = generate_euclidian_edge_index(num_tokens, token_coordinates, self.token_neighbour_radius)
         else:
-            euclidian_token_edges = None
+            euclidian_token_edges, euclidian_token_edge_feat = None, None
 
         # relative position encoding: token2chain, token_idx
         token_idx = batch["token_idx"][token_mask]
@@ -110,7 +111,7 @@ class ADiT(nn.Module):
             token_feat, token_pair_feat,
             atom_name, atomic_number, atom_coordinates, atom2token, atom_belong_to_protein, num_atoms,
             atom_edges, token_edges, token_edges_matrix,
-            euclidian_atom_edges, euclidian_token_edges
+            euclidian_atom_edges, euclidian_token_edges, euclidian_atom_edge_feat, euclidian_token_edge_feat
         )
         batch["atom_feat"] = out_atom_feat
 

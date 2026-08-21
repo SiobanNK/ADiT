@@ -4,6 +4,10 @@ from torch import nn
 from torch_scatter import scatter_mean
 from torch_cluster import radius_graph
 
+from adit.common import residue_constants, protein
+CA_IDX = residue_constants.atom_order['CA']
+CB_IDX = residue_constants.atom_order['CB']
+
 
 def generate_sparse_attention_matrix(num_atom, N_query, N_key, device):
     """
@@ -37,6 +41,8 @@ def generate_sparse_attention_edge_batch(num_tokens, num_atoms_per_token, N_quer
 
 
 
+
+
 def generate_euclidian_edge_index(num_nodes, node_coordinates, neighbour_radius):
     # batch vector: which sample each atom belongs to, e.g. [0,0,0,1,1,2,2,2,2,...]
     batch = torch.repeat_interleave(
@@ -47,13 +53,32 @@ def generate_euclidian_edge_index(num_nodes, node_coordinates, neighbour_radius)
         r=neighbour_radius,
         batch=batch,
         loop=True,       # keep self-loops, to match your original `dist < max_neighbour_dist` on the diagonal (dist=0)
-        max_num_neighbors=num_nodes.max().item(),  # avoid silently truncating dense regions; tune if memory-bound
+        max_num_neighbors=32,
     )
-    return edge_index
+
+    source, destination = edge_index
+    edge_distance = (node_coordinates[source] - node_coordinates[destination]).norm(dim=-1)
+    return edge_index, edge_distance
 
 
-def generate_token_coordinates(atom_coordinates, atom2token):
-    return scatter_mean(atom_coordinates, atom2token, dim=0)
+def generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, T:str = "centroid"):
+    if T == "CB":
+        cb_poses = atom_positions[:, :, CB_IDX, :]        # (B, Lmax, 3)
+        cb_mask = atom_mask[:, :, CB_IDX].unsqueeze(-1)   # (B, Lmax, 1), 1 si CB présent
+        ca_poses = atom_positions[:, :, CA_IDX, :]
+        res_poses = torch.where(cb_mask.bool(), cb_poses, ca_poses) # Calpha position if glycine / no Cbeta
+        return res_poses[token_mask]    # (Ltot,3)
+
+    elif T == "CA":
+        ca_poses = atom_coordinates[:, :, CA_IDX, :]
+        return res_poses[token_mask]
+
+    elif T == "centroid": # centroids of heavy atoms
+        return scatter_mean(atom_coordinates, atom2token, dim=0)
+
+    else:
+        raise ValueError('unknown token coordinate type')
+
 
 
 def generate_dense_attention_matrix(num_token, device):

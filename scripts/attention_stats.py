@@ -5,10 +5,10 @@ le modèle : le edge_index ne dépend que des coordonnées + masks du batch, on
 peut donc réutiliser directement generate_euclidian_edge_index /
 generate_token_coordinates.
 
-Usage (à adapter selon vos overrides Hydra, cf. train.sh) :
+Usage :
 
-    python attention_stats.py experiment=lba_S ++data.batch_size=16 \
-        +model.net.atom_neighbour_radius=0.5 +model.net.token_neighbour_radius=1.0 n_batches=20
+    python scripts/attention_stats.py experiment=lba_S ++data.batch_size=16 \
+        +model.net.atom_neighbour_radius=0.5 +model.net.token_neighbour_radius=1.0 +n_batches=20
 
 ATTENTION ! Les coordonnées sont converties en nm (cf config).
 
@@ -54,9 +54,9 @@ def print_stats(deg: torch.Tensor, name: str):
         f"median={deg.median().item():.1f}"
     )
 
-def save_figure(all_atom_degrees, all_token_degrees, dataset: str, output_dir: str):
+def save_figure(all_atom_degrees, all_token_degrees, dataset: str, atom_neighbour_radius, token_neighbour_radius, output_dir: str):
     fig, axes = plt.subplots(2,figsize=(6, 8))
-    fig.suptitle(f"Distribution des voisins — {dataset} (tous batches confondus)")
+    fig.suptitle(f"Distribution des voisins — {dataset} (tous batches confondus)\nAtom radius = {atom_neighbour_radius} nm ; token radius = {token_neighbour_radius} nm")
 
     if all_atom_degrees:
         atom_degrees = torch.cat(all_atom_degrees)
@@ -164,7 +164,7 @@ def main(cfg: DictConfig) -> None:
 
     dataset_path = Path(cfg.data.dataset.get("path_to_dataset"))
     dataset = dataset_path.name
-    save_figure(all_atom_degrees, all_token_degrees, dataset, output_dir)
+    save_figure(all_atom_degrees, all_token_degrees, dataset, atom_neighbour_radius, token_neighbour_radius, output_dir)
 
 
 if __name__ == "__main__":

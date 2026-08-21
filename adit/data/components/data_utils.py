@@ -23,7 +23,7 @@ def read_csv(fpath):
         next(csv_reader)
         for row in csv_reader:
             rows.append(row)
-    
+
     return rows
 
 
@@ -45,7 +45,7 @@ def get_subgraph(data_object, res_mask):
 def extract_dest_protein_and_mutation_mask(data_object, chain_a, chain_b, mutations):
     entity_a = torch.zeros(data_object["aatype"].shape[0], dtype=torch.bool)
     alphabet2id = data_object["chain_id_mapping"]
-    
+
     for a in chain_a:
         entity_a |= data_object["chain_index"] == alphabet2id[a]
 
@@ -61,7 +61,7 @@ def extract_dest_protein_and_mutation_mask(data_object, chain_a, chain_b, mutati
         is_mutation |= \
             (data_object["chain_index"] == alphabet2id[m[1]]) & \
             (residue_number == int(m[2:-1]))
-    
+
     res_mask = (entity_a | entity_b).bool()
     del data_object["chain_id_mapping"]
     data_object = get_subgraph(data_object, res_mask)
@@ -91,7 +91,7 @@ def truncation_skempi(data_object, is_mutation, k, consecutive = False):
         end = np.where(new_idx == selected_index.max())[0][0] + 1
         new_idx = new_idx[start:end]
         return new_idx
-                                                
+
     if consecutive:
         selected_indices = consecutive_sequence(selected_indices.numpy())
 
@@ -126,7 +126,7 @@ def spatial_crop(protein_feat, ligand_feat, max_len, interface: bool = False):
             ligand_centre_coord = ligand_feat['ligand_atom_positions']
             if max_len >= prot_centre_coord.shape[0] + ligand_centre_coord.shape[0]:
                 return protein_feat, ligand_feat
-            
+
             distances = L2_dist(prot_centre_coord, ligand_centre_coord)
             prot_idx, ligand_idx = np.where(distances < 15)
             assert prot_idx.shape[0] > 0 and ligand_idx.shape[0] > 0
@@ -140,9 +140,9 @@ def spatial_crop(protein_feat, ligand_feat, max_len, interface: bool = False):
                 centre_coord = ligand_centre_coord[
                     ligand_idx[random_select_idx - prot_idx.shape[0]], :
                 ]
-            
+
             distances = L2_dist(centre_coord[np.newaxis, :], np.vstack([prot_centre_coord, ligand_centre_coord]))
-            
+
             indices = np.argpartition(distances[0, :], max_len)[:max_len]
             prot_selected_indices = indices[np.where(indices < prot_centre_coord.shape[0])[0]]
             ligand_selected_indices = indices[
@@ -153,12 +153,12 @@ def spatial_crop(protein_feat, ligand_feat, max_len, interface: bool = False):
 
             protein_feat = get_subgraph(protein_feat, prot_selected_indices)
             ligand_feat = get_subgraph(ligand_feat, ligand_selected_indices)
-        
+
         else:
             # case 2:prot-prot
             if protein_feat['aatype'].shape[0] <= max_len:
                 return protein_feat, ligand_feat
-            
+
             unique_chain_numbers = np.unique(protein_feat['chain_index'])
             assert unique_chain_numbers.shape[0] == 2
             chain_0_mask = np.where(protein_feat['chain_index'] == unique_chain_numbers[0])[0]
@@ -182,17 +182,17 @@ def spatial_crop(protein_feat, ligand_feat, max_len, interface: bool = False):
                 centre_coord = prot_centre_coord_chain_1[
                     prot_chain_1_idx[random_select_idx - prot_chain_0_idx.shape[0]], :
                 ]
-            
+
             distances = L2_dist(centre_coord[np.newaxis, :], prot_centre_coord)
             indices = np.argpartition(distances[0, :], max_len)[:max_len]
             indices = np.sort(indices) # important !!!
             protein_feat = get_subgraph(protein_feat, indices)
-            
+
     else:
         assert ligand_feat is None, 'only single chain prot uses spatial crop (no interface)'
         if protein_feat['aatype'].shape[0] <= max_len:
             return protein_feat, ligand_feat
-        
+
         prot_centre_coord = protein_feat['atom_positions'][:, CA_IDX, :]
         centre_idx = np.random.randint(0, prot_centre_coord.shape[0])
         A = prot_centre_coord[centre_idx][np.newaxis, :]

@@ -8,8 +8,8 @@
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-##SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+##SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -31,11 +31,12 @@ else    # IDENTITY=60
     EPOCHS=99
 fi  # cf article
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
+COORD_ENCODING="null"     # onehot , rbf , null
 D_MAX=2.2
 
 CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="ckpts/${COORD_ENCODING}/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"
+# CKPT_PATH="ckpts/rbf/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"
+CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -58,16 +59,18 @@ echo 'Launching script'
 
 python "$RUN_SCRIPT" \
     experiment=${DATA}_$SIZE \
-    ++seed=$SEED \
-    ++data.dataset.split_identity_threshold=identity_$IDENTITY \
-    ++task_name=${DATA}${IDENTITY}_seed${SEED}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.relative_position_d_max=$D_MAX \
-    ++model.net.dropout=$DROPOUT \
-    ++trainer.max_epochs=$EPOCHS \
+    seed=$SEED \
+    data.batch_size=60  \
+    data.dataset.split_identity_threshold=identity_$IDENTITY \
+    task_name=${DATA}${IDENTITY}_seed${SEED}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
+    +model.net.token_coord_encoder=$COORD_ENCODING \
+    +model.net.relative_position_d_max=$D_MAX \
+    model.net.dropout=$DROPOUT \
+    trainer.max_epochs=$EPOCHS \
     ckpt_path=$CKPT_PATH \
-    ++trainer.devices=$SLURM_NTASKS_PER_NODE \
+    trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}${IDENTITY}_${COORD_ENCODING}_d${D_MAX}_epoch_$CKPT_EPOCH \
-    ++logger.wandb.id=${DATA}${IDENTITY}_${COORD_ENCODING}_${SLURM_JOB_ID} \
-    ++logger.wandb.project=$DATA
+    logger.wandb.name=${DATA}${IDENTITY}_${COORD_ENCODING}_d${D_MAX}_epoch_$CKPT_EPOCH \
+    logger.wandb.id=${DATA}${IDENTITY}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    ++logger.wandb.project=$DATA \
+    test=true
