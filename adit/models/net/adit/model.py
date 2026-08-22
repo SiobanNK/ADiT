@@ -45,7 +45,7 @@ class ADiT(nn.Module):
         self.diffusion_module = DiffusionModule(
             atom_dim, atom_pair_dim, token_dim, token_pair_dim,
             N_block_atom, N_head_atom, N_block_token, N_head_token,
-            gnn_positions, gnn_type, token_neighbour_radius
+            gnn_positions, gnn_type, atom_neighbour_radius, token_neighbour_radius
         )
 
     def forward(self, batch):
