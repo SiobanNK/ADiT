@@ -119,7 +119,6 @@ class OptionalGNN(nn.Module):
             self.gnn = GCNConv(
                 in_channels=in_channels,
                 out_channels=in_channels,
-                cached=True,
                 bias=True,
             )
         else:
