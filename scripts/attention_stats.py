@@ -7,8 +7,7 @@ generate_token_coordinates.
 
 Usage :
 
-    python scripts/attention_stats.py experiment=lba_S ++data.batch_size=16 \
-        +model.net.atom_neighbour_radius=0.5 +model.net.token_neighbour_radius=1.0 +n_batches=20
+python scripts/attention_stats.py experiment=lba_S ++data.batch_size=16 +model/gnn='gat' +n_batches=20
 
 ATTENTION ! Les coordonnées sont converties en nm (cf config).
 
@@ -38,6 +37,7 @@ from adit.models.net.adit.utils import generate_euclidian_edge_index, generate_t
 
 def compute_degrees(edge_index, num_nodes_total):
     """Renvoie le tenseur des degrés (1 valeur par noeud), ou None si pas d'arêtes."""
+    print(edge_index)
     if edge_index is None or edge_index.numel() == 0:
         return None
     return degree(edge_index[0], num_nodes=num_nodes_total).float()
@@ -106,8 +106,6 @@ def save_histogram(ax, deg: torch.Tensor, name: str, max_ticks: int = 7):
 @hydra.main(version_base="1.3", config_path=str(root / "configs"), config_name="train.yaml")
 def main(cfg: DictConfig) -> None:
     n_batches = int(cfg.get("n_batches", 10))
-    output_dir = cfg.get("output_dir", "./outputs/GCN_neighbours_stats")
-    os.makedirs(output_dir, exist_ok=True)
 
     atom_neighbour_radius = float(
         cfg.get("atom_neighbour_radius", cfg.model.net.get("atom_neighbour_radius", 0.0))
@@ -116,6 +114,11 @@ def main(cfg: DictConfig) -> None:
         cfg.get("token_neighbour_radius", cfg.model.net.get("token_neighbour_radius", 0.0))
     )
     print(f"[probe] atom_neighbour_radius={atom_neighbour_radius}  token_neighbour_radius={token_neighbour_radius}")
+
+    token_coord_type = str(
+        cfg.get("token_coord_type", cfg.model.net.get("token_coord_type", "centroid"))
+    )
+    print(f"[probe] token_coord_type={token_coord_type}")
 
     print(f"[probe] instanciation du datamodule ({cfg.data._target_})")
     datamodule = hydra.utils.instantiate(cfg.data)
@@ -139,7 +142,7 @@ def main(cfg: DictConfig) -> None:
             num_atoms = batch["atom_mask"].sum(dim=(1,2)).int()
 
             if atom_neighbour_radius > 0.0:
-                atom_edges = generate_euclidian_edge_index(
+                atom_edges, atom_distances = generate_euclidian_edge_index(
                     num_atoms, atom_coordinates, atom_neighbour_radius
                 )
                 deg = compute_degrees(atom_edges, num_atoms.sum().item())
@@ -149,9 +152,11 @@ def main(cfg: DictConfig) -> None:
             if token_neighbour_radius > 0.0:
                 num_atoms_per_token = batch["atom_mask"].sum(-1)[token_mask].int()
                 atom2token = torch.arange(num_tokens.sum(), device='cpu').repeat_interleave(num_atoms_per_token)
-                token_coordinates = generate_token_coordinates(atom_coordinates, atom2token)
+                atom_positions = batch["atom_positions"][token_mask]
+                token_type = batch["token_type"]
+                token_coordinates = generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, token_type, T=token_coord_type)
                 print(token_coordinates)
-                token_edges = generate_euclidian_edge_index(
+                token_edges, token_distances = generate_euclidian_edge_index(
                     num_tokens, token_coordinates, token_neighbour_radius
                 )
                 deg = compute_degrees(token_edges, num_tokens.sum().item())
@@ -161,6 +166,9 @@ def main(cfg: DictConfig) -> None:
             print(f"[probe] batch {i} traité (n_atoms={num_atoms.sum().item()}, n_tokens={num_tokens.sum().item()})")
 
     print(f"\n[probe] === stats agrégées sur {n_batches} batches ===")
+
+    output_dir = cfg.get("output_dir", f"./outputs/GCN_neighbours_stats/token_coord_{token_coord_type}")
+    os.makedirs(output_dir, exist_ok=True)
 
     dataset_path = Path(cfg.data.dataset.get("path_to_dataset"))
     dataset = dataset_path.name

@@ -4,3 +4,4 @@ atom_neighbour_radius: 0.5
 token_neighbour_radius: 1.0
 gnn_positions: [False, True, False, True, False, True]
 gnn_type: "gat"
+token_coord_type: "CB"  # centroid, CB, CA

@@ -61,23 +61,32 @@ def generate_euclidian_edge_index(num_nodes, node_coordinates, neighbour_radius)
     return edge_index, edge_distance
 
 
-def generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, T:str = "centroid"):
-    if T == "CB":
-        cb_poses = atom_positions[:, :, CB_IDX, :]        # (B, Lmax, 3)
-        cb_mask = atom_mask[:, :, CB_IDX].unsqueeze(-1)   # (B, Lmax, 1), 1 si CB présent
-        ca_poses = atom_positions[:, :, CA_IDX, :]
-        res_poses = torch.where(cb_mask.bool(), cb_poses, ca_poses) # Calpha position if glycine / no Cbeta
-        return res_poses[token_mask]    # (Ltot,3)
-
-    elif T == "CA":
-        ca_poses = atom_coordinates[:, :, CA_IDX, :]
-        return res_poses[token_mask]
-
-    elif T == "centroid": # centroids of heavy atoms
+def generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, token_type, T: str = "centroid"):
+    """
+    A token is a residue in proteins but a single heavy atom in small molecules.
+    batch["token_type"] encodes the origin of the token.
+    """
+    if T == "centroid":  # centroids of heavy atoms
         return scatter_mean(atom_coordinates, atom2token, dim=0)
 
+    if T == "CB":
+        cb_coordinates = atom_positions[:, CB_IDX, :]                      # (L, 37, 3) -> (L, 3)
+        cb_mask = atom_mask[token_mask][:, CB_IDX].unsqueeze(-1)     # (L, 37) -> (L, 1) 1 if CB present
+        ca_coordinates = atom_positions[:, CA_IDX, :]
+        res_coordinates = torch.where(cb_mask.bool(), cb_coordinates, ca_coordinates)  # Calpha if glycine / no Cbeta. (L,3)
+
+    elif T == "CA":
+        res_coordinates = atom_positions[:, CA_IDX, :]        # (L, 3)
+
     else:
-        raise ValueError('unknown token coordinate type')
+        raise ValueError('Unknown token coordinate type.')
+
+    centroid_coordinates = scatter_mean(atom_coordinates, atom2token, dim=0)  # (L, 3)
+    atom_token_mask = token_type[token_mask].bool()  # (B, Lmax) -> (L) True if the token is a small molecule heavy atom
+
+    token_pos = torch.where(atom_token_mask.unsqueeze(-1), centroid_coordinates, res_coordinates)
+
+    return token_pos
 
 
 

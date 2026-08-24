@@ -72,7 +72,7 @@ srun python "$RUN_SCRIPT" \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
-    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
+    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_Cbeta_denoising_${ADIT_SIZE} \
     logger=many_loggers \
     ++logger.wandb.name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}\
     ++logger.wandb.id=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
