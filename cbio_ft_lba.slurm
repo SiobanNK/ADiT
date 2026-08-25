@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=lba30_rbf
-#SBATCH --output=./logs/%x30_%j.log    # x: job name , j: job ID, a: array task ID
-#SBATCH --error=./logs/%x30_%j.err
-#SBATCH --array=42
-#SBATCH --mem=45G
-#SBATCH --time=20:00:00
+#SBATCH --job-name=lba
+#SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
+#SBATCH --error=./logs/%x%a_%j.err
+#SBATCH --array=60
+#SBATCH --mem=15G
+#SBATCH --time=10:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-##SBATCH --cpus-per-task=8
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:P100:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -21,8 +21,8 @@ RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 DATA="lba"
 SIZE="S"
-IDENTITY=60 # "$SLURM_ARRAY_TASK_ID"
-SEED="$SLURM_ARRAY_TASK_ID"
+IDENTITY=$SLURM_ARRAY_TASK_ID
+SEED=42 #"$SLURM_ARRAY_TASK_ID"
 if [[ "$IDENTITY" -eq 30 ]]; then
     DROPOUT=0.0
     EPOCHS=10 # 3
@@ -31,12 +31,9 @@ else    # IDENTITY=60
     EPOCHS=99
 fi  # cf article
 
-COORD_ENCODING="null"     # onehot , rbf , null
-D_MAX=2.2
-
-CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
+COORD_ENCODING="null"
 # CKPT_PATH="ckpts/rbf/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"
-CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
+CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_032.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -59,18 +56,15 @@ echo 'Launching script'
 
 python "$RUN_SCRIPT" \
     experiment=${DATA}_$SIZE \
-    seed=$SEED \
-    data.batch_size=60  \
+    test=true \
     data.dataset.split_identity_threshold=identity_$IDENTITY \
-    task_name=${DATA}${IDENTITY}_seed${SEED}_${SIZE}_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    +model.net.token_coord_encoder=$COORD_ENCODING \
-    +model.net.relative_position_d_max=$D_MAX \
+    task_name=${DATA}${IDENTITY}_${SIZE} \
     model.net.dropout=$DROPOUT \
-    trainer.max_epochs=$EPOCHS \
     ckpt_path=$CKPT_PATH \
+    +data.drop_last=true \
+    trainer.max_epochs=$EPOCHS \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    logger.wandb.name=${DATA}${IDENTITY}_${COORD_ENCODING}_d${D_MAX}_epoch_$CKPT_EPOCH \
-    logger.wandb.id=${DATA}${IDENTITY}_${COORD_ENCODING}_${SLURM_JOB_ID} \
-    ++logger.wandb.project=$DATA \
-    test=true
+    logger.wandb.name=${DATA}${IDENTITY} \
+    logger.wandb.id=${DATA}${IDENTITY}_${SLURM_JOB_ID} \
+    ++logger.wandb.project="Profiling"

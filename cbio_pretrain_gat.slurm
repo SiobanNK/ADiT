@@ -2,47 +2,46 @@
 #SBATCH --job-name=pretrain_gat
 #SBATCH --output=./logs/%x_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x_%j.err
-#SBATCH --array=0
+## SBATCH --array=0
 #SBATCH --mem=45G
-#SBATCH --time=00:15:00
+#SBATCH --time=00:10:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
-
-
 
 
 RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="XS"
+GNN_TYPE='gat'  # gcn / gat
 
-EPOCHS=33
+EPOCHS=5
 
-# Nombre à convertir (0-64), sur 8 bits ici -> adapte NBITS si besoin
-NUM=$SLURM_ARRAY_TASK_ID
-NBITS=8
+# # Nombre à convertir (0-64), sur 8 bits ici -> adapte NBITS si besoin
+# NUM=$SLURM_ARRAY_TASK_ID
+# NBITS=8
 
-# Conversion en binaire, complété par des zéros à gauche
-BIN=$(printf '%0*d' "$NBITS" "$(echo "obase=2;$NUM" | bc)")
+# # Conversion en binaire, complété par des zéros à gauche
+# BIN=$(printf '%0*d' "$NBITS" "$(echo "obase=2;$NUM" | bc)")
 
-# Construction de la liste Hydra-compatible [False, True, ...]
-LIST="["
-for (( i=0; i<${#BIN}; i++ )); do
-    bit=${BIN:$i:1}
-    if [ "$bit" = "1" ]; then
-        LIST+="True"
-    else
-        LIST+="False"
-    fi
-    if [ $i -lt $((${#BIN}-1)) ]; then
-        LIST+=","
-    fi
-done
-LIST+="]"
+# # Construction de la liste Hydra-compatible [False, True, ...]
+# LIST="["
+# for (( i=0; i<${#BIN}; i++ )); do
+#     bit=${BIN:$i:1}
+#     if [ "$bit" = "1" ]; then
+#         LIST+="True"
+#     else
+#         LIST+="False"
+#     fi
+#     if [ $i -lt $((${#BIN}-1)) ]; then
+#         LIST+=","
+#     fi
+# done
+# LIST+="]"
 
 echo "Nombre: $NUM -> Binaire: $BIN -> Liste: $LIST"
 # ---- Welcome...
@@ -66,12 +65,13 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    +model/gnn=gat \
+    +model/gnn=$GNN_TYPE \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
-    task_name=gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE} \
+    data.num_workers=$SLURM_CPUS_PER_TASK \
+    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_Cbeta_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=gat${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}_pretrain_nm\
-    ++logger.wandb.id=gat${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}\
+    ++logger.wandb.id=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"

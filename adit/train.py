@@ -88,7 +88,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     model, ckpt_path = checkpoint_utils.load_model_checkpoint(model, cfg.get("ckpt_path"), load_weight_only=cfg.get("load_weight_only", True))
     # ckpt_path = cfg.get("ckpt_path")
-    
+
     if cfg.get("train"):
         log.info("Starting training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
