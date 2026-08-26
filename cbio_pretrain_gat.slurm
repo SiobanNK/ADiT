@@ -4,7 +4,7 @@
 #SBATCH --error=./logs/%x_%j.err
 ## SBATCH --array=0
 #SBATCH --mem=45G
-#SBATCH --time=00:10:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -18,8 +18,10 @@ RUN_DIR="/cluster/CBIO/home/snieradzikkozic/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="XS"
 GNN_TYPE='gat'  # gcn / gat
+CKPT="outputs/gat_Cbeta_denoising_XS/checkpoints/epoch_005.ckpt"
+CKPT_WANDB_ID="gat_pretrain_1329674"
 
-EPOCHS=5
+EPOCHS=12
 
 # # Nombre à convertir (0-64), sur 8 bits ici -> adapte NBITS si besoin
 # NUM=$SLURM_ARRAY_TASK_ID
@@ -66,12 +68,15 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     +model/gnn=$GNN_TYPE \
+    ckpt=$CKPT \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
     data.num_workers=$SLURM_CPUS_PER_TASK \
-    task_name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_Cbeta_denoising_${ADIT_SIZE} \
+    task_name=${GNN_TYPE}_Cbeta_denoising_${ADIT_SIZE}_end \
     logger=many_loggers \
-    ++logger.wandb.name=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_${ADIT_SIZE}\
-    ++logger.wandb.id=${GNN_TYPE}${SLURM_ARRAY_TASK_ID}_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${GNN_TYPE}_CB_${ADIT_SIZE}\
+    ++logger.wandb.id=$CKPT_WANDB_ID \
     ++logger.wandb.project="pretrain"
+
+#  ${GNN_TYPE}_pretrain_$CKPT_SLURM_JOB_ID

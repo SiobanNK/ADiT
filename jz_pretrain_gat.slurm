@@ -9,23 +9,25 @@
 #SBATCH --account=hhy@h100      # echo $IDRPROJ
 #SBATCH -C h100                 # partition gpu_p6 : noeud quadri-GPU H100 80 Go
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=3
-#SBATCH --gres=gpu:3
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:2
 # Le nombre de CPU par tache doit etre adapte en fonction de la partition utilisee. Sachant
 # qu'ici on ne reserve qu'un seul GPU (soit 1/4 des GPU du noeud), l'ideal est de reserver 1/4
 # des CPU du noeud pour la seule tache :
 #SBATCH --cpus-per-task=24           # nombre de CPU par tache pour gpu_p6 (1/4 des CPU du noeud 4-GPU H100)
 #SBATCH --hint=nomultithread        # réservation des cœurs physiques (pas d'hyperthreading)
-#SBATCH --time=60:00:00
-#SBATCH --qos=qos_gpu_h100-t4    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
+#SBATCH --time=10:00:00
+#SBATCH --qos=qos_gpu_h100-t3    # qos_cpu-t3 (default, 20h), qos_cpu-t4 (100h), qos_cpu-dev (2h)
 
 
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
-ADIT_SIZE="S"
+ADIT_SIZE="XS"
 GNN_TYPE='gat'  # gcn / gat
+CKPT="outputs/2026-08-25/gat_Cbeta_denoising_XS_07-14-16/checkpoints/epoch_005.ckpt"
+CKPT_WANDB_ID="gat_pretrain_1329674"
 
-EPOCHS=33
+EPOCHS=10
 
 # CKPT="outputs/pretrain_gat_phase2/gat${SLURM_ARRAY_TASK_ID}_denoising_${ADIT_SIZE}/checkpoints/last.ckpt"
 
@@ -75,6 +77,9 @@ srun python "$RUN_SCRIPT" \
     data.num_workers=$SLURM_CPUS_PER_TASK \
     task_name=${GNN_TYPE}_CB_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=${GNN_TYPE}_${ADIT_SIZE}\
-    ++logger.wandb.id=${GNN_TYPE}_CB_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${GNN_TYPE}_CB_${ADIT_SIZE}\
+    ++logger.wandb.id=$CKPT_WANDB_ID \
     ++logger.wandb.project="pretrain"
+
+
+# ${GNN_TYPE}_CB_pretrain_$SLURM_JOB_ID
