@@ -68,7 +68,7 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
     +model/gnn=$GNN_TYPE \
-    ckpt=$CKPT \
+    ckpt_path=$CKPT \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
