@@ -7,15 +7,6 @@ def create_one_hot_encoding(x, class_count):
     return torch.nn.functional.one_hot(x, num_classes=class_count).type(torch.float)
 
 def compute_token_coordinates(atom_coordinates, atom2token):
-    """
-    Atom coordinates are already centered and rescaled to the unit : nm (cf file data/components/feature_transform.py)
-    Taille d'une protéine : 100 - 1000 angtroms = 10 - 100 nm.
-    Pour avoir 64 classes : tokens classés de distance n°0 à distance n°64, puis classe n°65 correspond aux tokens plus éloignés dans une même chaîne.
-    Si les 65 premières classes couvrent les distances 0 - 500 angstroms:
-        500 / 65 = environ 8 = environ 10
-    Donc diviser par 10 les coordonnées (déjà centrées) et prendre l'int des distances.
-    Pb: adaptable à d'autres molécules ?
-    """
     centroid = scatter_mean(atom_coordinates, atom2token, dim=0)
     return centroid # output shape : (num_tokens, 3)
 
@@ -39,15 +30,14 @@ class RelativePositionEncoding(nn.Module):
         self.d_max = d_max
 
     def rbf(self, dist, device="cpu"):
-        # angstrom
         rbf_dim = self.q_max + 1
 
-        d_mu = torch.linspace(self.d_min, self.d_max, rbf_dim, device=device) # [0.0000,  0.7812,  1.5625, ...]
-        d_mu = d_mu.view([1, -1])   # [[ 0.0000,  0.7812,  1.5625, ...]]
+        d_mu = torch.linspace(self.d_min, self.d_max, rbf_dim, device=device)
+        d_mu = d_mu.view([1, -1])
         d_sigma = (self.d_max - self.d_min) / rbf_dim
-        d_expand = torch.unsqueeze(dist, -1) # [[[0.0];[0.7812];[1.5625];...]] column
+        d_expand = torch.unsqueeze(dist, -1)
 
-        rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)    # size : (65, 1, 1, N)
+        rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)
         return rbf
 
     def forward(self, token_idx, token2chain, edge_token, atom_coordinates, atom2token):
@@ -70,10 +60,10 @@ class RelativePositionEncoding(nn.Module):
                         f"Got: {self.token_coord_encoder!r} (type: {type(self.token_coord_encoder).__name__})"
                     )
 
-        d_ij_token = torch.where(   # signed, symmetric relative distance as a non-negative bucket index for one-hot encoding
-            same_chain, # condition
-            torch.clamp(token_idx[edge_token[0]] - token_idx[edge_token[1]] + self.r_max, 0, 2 * self.r_max),   # input. pourquoi clamp ?
-            (2 * self.r_max + 1) * torch.ones_like(same_chain, device=token_idx.device, dtype=torch.long)       # other if condition not met
+        d_ij_token = torch.where(
+            same_chain,
+            torch.clamp(token_idx[edge_token[0]] - token_idx[edge_token[1]] + self.r_max, 0, 2 * self.r_max),
+            (2 * self.r_max + 1) * torch.ones_like(same_chain, device=token_idx.device, dtype=torch.long)
         )
         a_ij_rel_token = create_one_hot_encoding(d_ij_token, 2 * self.r_max + 2)
 

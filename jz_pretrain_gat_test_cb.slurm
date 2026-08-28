@@ -23,7 +23,7 @@ RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="XS"
 GNN_TYPE='gat'  # gcn / gat
-CKPT="outputs/gat_Cbeta_denoising_XS_end_11-37-19/checkpoints/epoch_005.ckpt"
+CKPT="outputs/gat_Cbeta_denoising_XS_end_11-37-19/checkpoints/last.ckpt"
 
 EPOCHS=10
 
