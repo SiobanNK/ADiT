@@ -40,11 +40,26 @@ After trying Graph Convolution and Graph Attention (GAT) at different positions 
 
 While atom coordinates are provided in input of ADiT, we chose to compute residues coordinates as the $C_\beta$ coordinates (or $C_\alpha$ in the case of glycine).
 
-Let $\mathbf{x}$ the single representation of atoms (resp. tokens) in output of a Diffusion Transformer in ADiT main trunk. We update this representation $\mathbf{x}_i$ with the representations of the closest atoms to the atom (resp. token) $i$ and the RBF embedding of the distances between the node $i$ and its neighbours:
+Let $\mathbf{x}$ the single representation of atoms (resp. tokens) in output of a Diffusion Transformer in ADiT main trunk. We update this representation $\mathbf{x}_i$ with the representations of the closest atoms to the atom (resp. token) $i$ and the embedding $\mathbf{e}$ of the distances between neighbours:
 
 $$
-\mathbf{x}_i' = \text{LN}(\mathbf{x}_i) + \text{ReLU}(\text{GATv2Conv}(\text{LN}(\mathbf{x}),\mathbf{e}_{i,:}))
+\mathbf{x} = \text{LN}(\mathbf{x}) + \text{ReLU}(\text{GATv2Conv}(\text{LN}(\mathbf{x}),\mathbf{e}))
 $$
+
+such that GATv2Conv updates $\mathbf{y}_i$ as:
+
+$$
+\mathbf{y}_i' = \sum_{j\in N(i) \cup \{i\}} \alpha_{i,j} W_t y_j
+$$
+
+with the attention coefficients
+
+$$
+\alpha_{i,j} = \frac{\text{exp}(\mathbf{a}^T \text{LeakyReLU}(W_s\mathbf{y}_i + W_t\mathbf{y}_j + W_e\mathbf{e}_{i,j}))}{\sum_{k\in N(i) \cup \{i\}} \text{exp}(\mathbf{a}^T \text{LeakyReLU}(W_s\mathbf{y}_i + W_t\mathbf{y}_k + W_e\mathbf{e}_{i,k}))}
+$$
+
+where $W_s, W_t, W_e$ are learnable coefficients.
+
 
 We defined the neighbours at atom-level by a maximum distance $d=0.5$ nm, and at token-level by $d=1$ nm. The edges are passed to GATv2Conv as an RBF embedding with 16 centers from 0 to $d$.
 
@@ -56,7 +71,7 @@ See the file `adit/models/net/adit/token_graph.py` for these additional layers a
 
 ## Reproduction
 
-### Structuram distance embedding in token pair conditioning
+### Structural distance embedding in token pair conditioning
 
 ```bash
 bash train.sh experiment=new_denoise_S_pdb_fixed_0_5 ++model.net.token_coord_encoder='rbf' ++model.net.relative_position_d_max=2.2 ++trainer.devices=4 trainer.min_epochs=33 trainer.max_epochs=33
