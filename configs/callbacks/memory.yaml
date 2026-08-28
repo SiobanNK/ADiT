@@ -5,3 +5,7 @@ gpu_monitor:
 batch_size_monitor:
   _target_: adit.utils.batch_size_monitor.BatchSizeMonitor
   log_every_n_steps: 1
+
+throughput_profiler:
+  _target_: adit.utils.throughput_profiler.ThroughputProfilerCallback
+  log_every_n_steps: 1

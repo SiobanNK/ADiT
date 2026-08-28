@@ -1,123 +1,95 @@
 # ADiT
-This is the official codebase of the paper
+This repo is based on the codebase of the paper **Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction**, *ICLR'2026*
+[[OpenReview](https://openreview.net/forum?id=o0Qfsq1fK8)].
 
-**Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction**, *ICLR'2026* 
-[[OpenReview](https://openreview.net/forum?id=o0Qfsq1fK8)]
+The official original codebase can be found at [[GitHub](https://github.com/VectorShi/ADiT)].
 
 ## Overview
-Biomolecular interactions play a critical role in biological processes. While recent breakthroughs like AlphaFold 3 have enabled accurate modeling of biomolecular complex structures, predicting binding affinity remains challenging mainly due to limited high-quality data. Recent methods are often specialized for specific types of biomolecular interactions, limiting their generalizability. In this work, we adapt AlphaFold 3 for representation learning to predict binding affinity, a non-trivial task that requires shifting from generative structure prediction to encoding observed geometry, simplifying the heavily conditioned trunk module, and designing a framework to jointly capture sequence and structural information. To address these challenges, we introduce the **<u>A</u>tom-level <u>Di</u>ffusion <u>T</u>ransformer** (**ADiT**), which takes sequence and structure as inputs, employs a unified tokenization scheme, integrates diffusion transformers, and removes dependencies on multiple sequence alignments and templates. We pre-train three ADiT variants on the PDB dataset with a denoising objective and evaluate them across protein-ligand, drug-target, protein-protein, and antibody-antigen interactions. The model achieves state-of-the-art or competitive performance across benchmarks, scales effectively with model size, and successfully identifies wet-lab validated affinity-enhancing antibody mutations, establishing a generalizable framework for biomolecular interactions. 
-![ADiT](./asset/ADiT.png)
+
+Binding affinity between biomolecules is a key indicator in the drug discovery process and other other molecular interactions. The Atom-level Diffusion Transformer (ADiT), a recent foundation model, managed to predict binding affinity with state-of-the-art or competitive results by jointly embedding sequence and structural information. While ADiT encodes 3D geometry in input, its multi-scale attention mechanisms miss long-range dependencies between atoms or residues distant in sequence but close in structure due to molecule folding. In this work, we complete ADiT with structural atom and residue distance representations, by adding light layers of embedding and geometric graph attention. We firstly added explicit geometric distance to the token-level conditioning, and then inserted graph attention layers within the main trunk consisting in a stack of atom and token-level Diffusion Transformers. The resulting upgraded model achieves better prediction results compared to the original ADiT, with neglectable additional parameters and training time.
 
 ## Installation
-You may install the dependencies via either conda or pip. Below is an example installation via pip for PyTorch 2.1.2 with CUDA 12.1.
-```bash
-pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu121
-```
-The torch_scatter, torch_cluster, torch_sparse, and related packages must be installed according to your specific PyTorch and CUDA version.
-For example, for Torch 2.1.0 + CUDA 12.1 + Python 3.10:
-```bash
-wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/pyg_lib-0.4.0%2Bpt21cu121-cp310-cp310-linux_x86_64.whl
-wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/torch_scatter-2.1.2%2Bpt21cu121-cp310-cp310-linux_x86_64.whl
-wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/torch_spline_conv-1.2.2%2Bpt21cu121-cp310-cp310-linux_x86_64.whl
-wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/torch_cluster-1.6.2%2Bpt21cu121-cp310-cp310-linux_x86_64.whl
-wget https://data.pyg.org/whl/torch-2.1.0%2Bcu121/torch_sparse-0.6.18%2Bpt21cu121-cp310-cp310-linux_x86_64.whl
+Refer to the original codebase to install the dependencies, checkpoints and datasets.
 
-# Then install them via pip.
-```
-Install additional dependencies:
-```bash
-pip install rootutils tqdm biopython foldcomp lightning omegaconf hydra-core pandas dm-tree
-pip install rich biotite atom3D torchdrug torcheval spyrmsd lifelines
-```
+## Changes upon the original codebase
 
-## Checkpoints
-The pretrained model checkpoints are available at: `https://huggingface.co/VectorShi/ADiT_pretrained_ckpts`. Please download them and then place them in `./ckpts` directory.
+The following diagram is based on the figure 1 of the original ADiT paper.
 
-Additionally, please download ESM-2-650M and also place it in `./ckpts` directory.
+We added to ADiT the graph attention blocks (red).
 
-```bash
-./ckpts$ ls
-adit_L.ckpt  adit_M.ckpt  adit_S.ckpt  esm2_t33_650M_UR50D.pt
-```
+![ADiT](./asset/GAT.svg)
 
-## Datasets
-The datasets used in this work are available at: `https://huggingface.co/datasets/VectorShi/ADiT_dataset`. 
-Steps: 1. Download the datasets. 2. Unzip them. 3. Place all files into the `./dataset` directory.
 
-```bash
-./dataset$ ls
-5T4  6xc3  adit_pretrain_data  davis  HER2  LBA  skempi
-```
 
-After the above steps, execute `python scripts/dump_esm_repr.py` to calculate esm representations for Protein-Protein datasets.
+
+### Structural distance embedding in token pair conditioning
+
+We firstly added structure information to the token-level pair conditioning, experimenting with RBF and onehot encoding. The RBF representation spans 0.2 nm to 2.2 nm with 64 bins.
+
+See the file `adit/models/net/adit/relative_position_encoder.py` where we concatenate the 3D distance representation to the original sequential distance embedding.
+
+### Structural graph attention
+
+The second improvement consists in updating the single representations of atoms (res. tokens) based on the closest atoms
+(resp. tokens) in the 3D molecule structure, by adding message passing.
+
+Indeed, the pair and single conditioning representations are originally based on the sequence :
+the token pair representation is dense within each batch item, while the atom pair representation links groups of 32 atoms with the surronding 128 atoms in sequence.
+Our message passing update considers a graph in which neighbourhood is determined on geometric distance rather than sequential.
+After trying Graph Convolution and Graph Attention (GAT) at different positions in ADiT main trunk, we retained Graph Attention inserted after each Diffusion Transformer block. An RBF embedding of the distances between neighbours is given to the GAT.
+
+While atom coordinates are provided in input of ADiT, we chose to compute residues coordinates as the $C_\beta$ coordinates (or $C_\alpha$ in the case of glycine).
+
+Let $\mathbf{x}$ the single representation of atoms (resp. tokens) in output of a Diffusion Transformer in ADiT main trunk. We update this representation $\mathbf{x}_i$ with the representations of the closest atoms to the atom (resp. token) $i$ and the RBF embedding of the distances between the node $i$ and its neighbours:
+
+$$
+\mathbf{x}_i' = \text{LN}(\mathbf{x}_i) + \text{ReLU}(\text{GATv2Conv}(\text{LN}(\mathbf{x}),\mathbf{e}_{i,:}))
+$$
+
+We defined the neighbours at atom-level by a maximum distance $d=0.5$ nm, and at token-level by $d=1$ nm. The edges are passed to GATv2Conv as an RBF embedding with 16 centers from 0 to $d$.
+
+See the file `adit/models/net/adit/token_graph.py` for these additional layers and `adit/models/net/adit/utils.py` for the implementation of token coordinates and distance-based edges.
+
+
+## Results
+
 
 ## Reproduction
-The following instructions describe how to reproduce the results reported in the ADiT paper using the released pretrained checkpoints.
 
-### Protein-Ligand Binding Affinity
-Finetune pretrained checkpoints:
+### Structuram distance embedding in token pair conditioning
+
 ```bash
-# identity_30
-bash train.sh experiment=lba_S ++trainer.devices=2 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_30 ckpt_path=ckpts/adit_S.ckpt
-
-bash train.sh experiment=lba_M ++trainer.devices=4 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_30 ckpt_path=ckpts/adit_M.ckpt
-
-bash train.sh experiment=lba_L ++trainer.devices=4 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_30 ckpt_path=ckpts/adit_L.ckpt
-
-bash test.sh experiment=lba_L ++trainer.devices=1 ++data.batch_size=1 ++data.dataset.split_identity_threshold=identity_30 ckpt_path="PATH_TO_FINETUNED_CKPT"
-
-# identity_60
-bash train.sh experiment=lba_S ++trainer.max_epochs=100 ++trainer.devices=2 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_60 ckpt_path=ckpts/adit_S.ckpt
-
-bash train.sh experiment=lba_M ++trainer.max_epochs=100 ++trainer.devices=4 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_60 ckpt_path=ckpts/adit_M.ckpt
-
-bash train.sh experiment=lba_L ++trainer.max_epochs=100 ++trainer.devices=4 ++data.batch_size=16 ++data.dataset.split_identity_threshold=identity_60 ckpt_path=ckpts/adit_L.ckpt
+bash train.sh experiment=new_denoise_S_pdb_fixed_0_5 ++model.net.token_coord_encoder='rbf' ++model.net.relative_position_d_max=2.2 ++trainer.devices=4 trainer.min_epochs=33 trainer.max_epochs=33
 ```
 
-### Drug-Target Binding Affinity Prediction
-Finetuning pretrained checkpoints:
+The resulting checkpoints are automatically saved in `outputs/YYYY-MM-DD/denoising_S_scale0_5/checkpoints`. Take the last one (`last.ckpt`) for the finetuning. The bash instructions are identical to the original codebase, with the additional arguments `++model.net.token_coord_encoder='rbf' ++model.net.relative_position_d_max=2.2` to the distance embedding. `relative_position_d_max` must be given in nm and corresponds to the highest center of the RBF embedding.
+
+If `model.net.token_coord_encoder` is not precised, default value is `null`, corresponding to the original ADiT model.
+
+You can experiment with `++model.net.token_coord_encoder='onehot'`.
+
+
+### Structural Graph Attention
+
 ```bash
-# split_seed=seed_1
-bash train.sh experiment=davis_S ++trainer.devices=2 ++data.batch_size=8 ++data.dataset.split_seed=seed_1 ckpt_path=ckpts/adit_S.ckpt
-
-bash train.sh experiment=davis_M ++trainer.devices=4 ++data.batch_size=8 ++data.dataset.split_seed=seed_1 ckpt_path=ckpts/adit_M.ckpt
-
-bash train.sh experiment=davis_L ++trainer.devices=4 ++data.batch_size=8 ++data.dataset.split_seed=seed_1 ckpt_path=ckpts/adit_L.ckpt
-
-bash test.sh experiment=davis_L ++trainer.devices=1 ++data.batch_size=1 ++data.dataset.split_seed=seed_1 ckpt_path="PATH_TO_FINETUNED_CKPT"
+bash train.sh experiment=new_denoise_S_pdb_fixed_0_5 +model/gnn='gat' ++trainer.devices=4 trainer.min_epochs=33 trainer.max_epochs=33
 ```
 
-### Protein-Protein Binding Affinity Prediction
-Finetuning pretrained checkpoints:
-```bash
-# take test_split=split_0 as an example
-bash train.sh experiment=skempi_S ++data.dataset.test_split=split_0 task_name=skempi_S_split_0 ckpt_path=ckpts/adit_S.ckpt
+The resulting checkpoints are automatically saved in `outputs/YYYY-MM-DD/denoising_S_scale0_5/checkpoints`. Take the last one (`last.ckpt`) for the finetuning. The bash instructions are identical to the original codebase, with the additional argument `+model/gnn='gat'` to add geometric graph attention after the diffusion transformers.
 
-bash train.sh experiment=skempi_M ++data.dataset.test_split=split_0 task_name=skempi_M_split_0 ckpt_path=ckpts/adit_M.ckpt
+You can modify the neighbouring radius (in nm), the type of graph update layer and the type of residue coordinates in the configuration file `config/model/gnn/gat.yaml`.
 
-bash train.sh experiment=skempi_L ++data.dataset.test_split=split_0 task_name=skempi_L_split_0 ckpt_path=ckpts/adit_L.ckpt
+## References
 
-bash test.sh experiment=skempi_L ++trainer.devices=1 ++data.batch_size=1 ++data.dataset.test_split=split_0 ++model.save_file=result_split_0.pkl ckpt_path="PATH_TO_FINETUNED_CKPT"
-```
-After getting `result_split_0.pkl`, `result_split_1.pkl`, and `result_split_2.pkl`, use `scripts/skempi_metric.py` to calculate the overall metrics.
-
-### Antibody-Antigen Binding Affinity Prediction
-Testing finetuned ADiT:
-```bash
-# take adit_L as an example
-bash test.sh experiment=her2_L data=her2 ++trainer.devices=1 ++data.batch_size=1 ++model.save_file=result_her2_L.pkl ckpt_path="PATH_TO_FINETUNED_CKPT"
-```
-
-## Citation
-If you find this codebase useful in your research, please cite the following paper.
-
-```bibtex
-@inproceedings{
-    shi2026towards,
-    title={Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction},
-    author={Liang Shi and Zuobai Zhang and Huiyu Cai and Santiago Miret and Zhi Yang and Jian Tang},
-    booktitle={The Fourteenth International Conference on Learning Representations},
-    year={2026},
-    url={https://openreview.net/forum?id=o0Qfsq1fK8}
-}
-```
+- Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction, ICLR, 2026 [OpenReview]
+- J. Jumper et al. Highly accurate protein structure prediction with alphafold. Nature, 2021
+- Michael M. Bronstein, Joan Bruna, Taco Cohen, Petar Veličković. Geometric Deep Learning: Grids, Groups, Graphs, Geodesics, and Gauges. arXiv, 2021
+- Wang, H. Liu, Y. Liu, Kurtin, Ji. Learning Hierarchical Protein Representations via Complete 3D Graph Networks. 2022
+- Velickovic, Cucurull, Casanova, Romero, Lio, Bengio. Graph attention networks. ICLR, 2018
+- Gilmer, Schoenholz, Riley, Vinyals, Dahl. Neural message passing for quantum chemistry. ICML, 2017
+- Thomas Kipf & Max Welling. Semi-supervised classification with graph convolutional networks. ICLR, 2016
+- MKearnes, S., McCloskey, K., Berndl, M. et al. Molecular graph convolutions: moving beyond fingerprints. J Comput Aided Mol Des 30, 595–608, 2016
+- Robin Pearce & Yang Zhang. Deep learning techniques have significantly impacted protein structure prediction and protein design. Current opinion in structural biology, 2021
+- Zhang, Xu, Chenthamarakshan, Lozano, Das, Tang. Enhancing  protein language models with structure based encoder and pre-training. ICLR MLDD Workshop, 2023
+- Brody, Alon, Yahav. How attentive are graph attention networks? ICLR, 2022
+- K. T. Schütt, P.-J. Kindermans, H. E. Sauceda, S. Chmiela, A. Tkatchenko3, K.-R. Müller. SchNet: A continuous-filter convolutional neural network for modeling quantum interactions. NIPS 2017.

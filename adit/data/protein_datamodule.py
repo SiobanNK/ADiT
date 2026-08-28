@@ -12,7 +12,7 @@ class BatchTensorConverter:
     """
     def __init__(self, target_keys: Optional[List] = None):
         self.target_keys = target_keys
-    
+
     def __call__(self, raw_batch: Sequence[Dict[str, object]]):
         B = len(raw_batch)
         # Only do for Tensor
@@ -25,7 +25,7 @@ class BatchTensorConverter:
             collated_batch[k] = self.collate_dense_tensors([d[k] for d in raw_batch], pad_v=0.0)
         for k in non_array_keys:    # return non-array keys as is
             collated_batch[k] = [d[k] for d in raw_batch]
-        
+
         return collated_batch
 
     @staticmethod
@@ -62,8 +62,8 @@ class ProteinDataModule(LightningDataModule):
     """`LightningDataModule` for a single protein dataset,
         for pretrain or finetune purpose.
 
-    ### To be revised.### 
-    
+    ### To be revised.###
+
     The MNIST database of handwritten digits has a training set of 60,000 examples, and a test set of 10,000 examples.
     It is a subset of a larger set available from NIST. The digits have been size-normalized and centered in a
     fixed-size image. The original black and white images from NIST were size normalized to fit in a 20x20 pixel box
@@ -115,6 +115,7 @@ class ProteinDataModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         shuffle: bool = False,
+        drop_last: bool = False
     ) -> None:
         """Initialize a `MNISTDataModule`.
 
@@ -129,15 +130,15 @@ class ProteinDataModule(LightningDataModule):
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
-        
+
         self.dataset = dataset
-        
+
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
 
         self.batch_size_per_device = batch_size
-        
+
         # print(f"Dataset size: {len(self.dataset)}")
 
     def prepare_data(self) -> None:
@@ -190,7 +191,7 @@ class ProteinDataModule(LightningDataModule):
             print(f"Test set size: {len(self.data_test)}")
         else:
             raise NotImplementedError(f"Stage {stage} not implemented.")
-        
+
     def _dataloader_template(self, dataset: Dataset[Any], train: bool = True) -> DataLoader[Any]:
         """Create a dataloader from a dataset.
 
@@ -205,15 +206,16 @@ class ProteinDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=(self.hparams.shuffle and train),
+            drop_last=self.hparams.drop_last
         )
-    
+
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
 
         :return: The train dataloader.
         """
         return self._dataloader_template(self.data_train, train=True)
-           
+
 
     def val_dataloader(self) -> DataLoader[Any]:
         """Create and return the validation dataloader.
@@ -252,4 +254,3 @@ class ProteinDataModule(LightningDataModule):
         :param state_dict: The datamodule state returned by `self.state_dict()`.
         """
         pass
-
