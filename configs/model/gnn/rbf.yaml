@@ -1,0 +1,5 @@
+# @package model.net
+
+token_coord_encoder: rbf  # "null", "onehot", "rbf"
+token_coord_type: CB      # CB, CA, centroid
+token_coord_encoder_d_max: 2.2 # nm

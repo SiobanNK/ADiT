@@ -6,10 +6,6 @@ from adit.models.net.adit.common import LinearNoBias
 def create_one_hot_encoding(x, class_count):
     return torch.nn.functional.one_hot(x, num_classes=class_count).type(torch.float)
 
-def compute_token_coordinates(atom_coordinates, atom2token):
-    centroid = scatter_mean(atom_coordinates, atom2token, dim=0)
-    return centroid # output shape : (num_tokens, 3)
-
 
 class RelativePositionEncoding(nn.Module):
 
@@ -40,11 +36,10 @@ class RelativePositionEncoding(nn.Module):
         rbf = torch.exp(-((d_expand - d_mu) / d_sigma) ** 2)
         return rbf
 
-    def forward(self, token_idx, token2chain, edge_token, atom_coordinates, atom2token):
+    def forward(self, token_idx, token2chain, edge_token, token_coordinates):
         same_chain = token2chain[edge_token[0]] == token2chain[edge_token[1]]
 
         if self.token_coord_encoder :
-            token_coordinates = compute_token_coordinates(atom_coordinates, atom2token) # shape : (num_tokens,3)
             dist = ((token_coordinates[edge_token[0]] - token_coordinates[edge_token[1]]) ** 2).sum(dim=-1).sqrt()
 
             if self.token_coord_encoder == "onehot" :

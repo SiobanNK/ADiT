@@ -19,8 +19,8 @@ class ADiT(nn.Module):
         N_query = 32, N_key = 128, dropout = 0.0,
         esm_weight_path = None, esm_model = None,
         remove_protein_ligand_edge = False,
-        token_coord_encoder = None, relative_position_d_max = 2.2,
-        atom_neighbour_radius = 0., token_neighbour_radius = 0., gnn_positions = (False,False,False,False,False,False), gnn_type="gat", token_coord_type="centroid"
+        token_coord_encoder = None, token_coord_encoder_d_max = 2.2,
+        atom_neighbour_radius = 0., token_neighbour_radius = 0., gnn_positions = (False,False,False,False,False,False), gnn_type="gat", token_coord_type="CB"
     ):
         super(ADiT, self).__init__()
         # basic
@@ -41,7 +41,7 @@ class ADiT(nn.Module):
 
         # modules
         self.seq_embedder = SeqEmbedder(self.token_dim, dropout = dropout, esm_weight_path = esm_weight_path, esm_model = esm_model)
-        self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout, token_coord_encoder=token_coord_encoder, d_max=relative_position_d_max)
+        self.relative_position_encoder = RelativePositionEncoding(self.token_pair_dim, dropout = dropout, token_coord_encoder=token_coord_encoder, d_max=token_coord_encoder_d_max)
         self.simple_pair_former = SimplePairFormer(token_dim, token_pair_dim)
         self.diffusion_module = DiffusionModule(
             atom_dim, atom_pair_dim, token_dim, token_pair_dim,
@@ -85,6 +85,8 @@ class ADiT(nn.Module):
         num_atoms = batch["atom_mask"].sum(-1)[token_mask].int()
         atom2token = torch.arange(num_tokens.sum(), device=device).repeat_interleave(num_atoms)
 
+        token_coordinates = generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, token_type, T=self.token_coord_type)
+
         if self.atom_neighbour_radius > 0.0:
             num_atoms_per_molecule = batch["atom_mask"].sum(dim=(1,2)).int()    # atom number per molecule, not per token
             euclidian_atom_edges, euclidian_atom_edge_feat = generate_euclidian_edge_index(num_atoms_per_molecule, atom_coordinates, self.atom_neighbour_radius)
@@ -93,7 +95,6 @@ class ADiT(nn.Module):
         if self.token_neighbour_radius > 0.0:
             atom_positions = batch["atom_positions"][token_mask]    # (L, 37, 3)
             token_type = batch["token_type"]
-            token_coordinates = generate_token_coordinates(atom_coordinates, atom2token, atom_positions, atom_mask, token_mask, token_type, T=self.token_coord_type)
             euclidian_token_edges, euclidian_token_edge_feat = generate_euclidian_edge_index(num_tokens, token_coordinates, self.token_neighbour_radius)
         else:
             euclidian_token_edges, euclidian_token_edge_feat = None, None
@@ -101,7 +102,7 @@ class ADiT(nn.Module):
         # relative position encoding: token2chain, token_idx
         token_idx = batch["token_idx"][token_mask]
         token2chain = batch["chain_index"][token_mask]
-        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges, atom_coordinates, atom2token)
+        relative_position_embedding = self.relative_position_encoder(token_idx, token2chain, token_edges, token_coordinates)
 
         # token pair repr
         token_feat, token_pair_feat = self.simple_pair_former(
