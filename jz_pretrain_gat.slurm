@@ -22,7 +22,7 @@
 RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
-GNN_TYPE='gat'  # gcn / gat
+STRUCT_EMBEDDING='rbf'  # gcn / gat
 # CKPT="outputs/2026-08-25/gat_Cbeta_denoising_XS_07-14-16/checkpoints/epoch_005.ckpt"
 # CKPT_WANDB_ID="gat_pretrain_1329674"
 
@@ -69,16 +69,16 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    +model/gnn=$GNN_TYPE \
+    +model/gnn=$STRUCT_EMBEDDING \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
     data.num_workers=$SLURM_CPUS_PER_TASK \
-    task_name=${GNN_TYPE}_CB_denoising_${ADIT_SIZE} \
+    task_name=${STRUCT_EMBEDDING}_CB_denoising_${ADIT_SIZE} \
     logger=many_loggers \
-    ++logger.wandb.name=${GNN_TYPE}_CB_${ADIT_SIZE}\
-    ++logger.wandb.id=${GNN_TYPE}_CB_pretrain_$SLURM_JOB_ID \
+    ++logger.wandb.name=${STRUCT_EMBEDDING}_CB_${ADIT_SIZE}\
+    ++logger.wandb.id=${STRUCT_EMBEDDING}_CB_pretrain_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
 
 
-# ${GNN_TYPE}_CB_pretrain_$SLURM_JOB_ID
+# ${STRUCT_EMBEDDING}_CB_pretrain_$SLURM_JOB_ID

@@ -23,7 +23,7 @@ RUN_DIR="$SCRATCH/ADiT"
 RUN_SCRIPT="./adit/train.py"
 ADIT_SIZE="S"
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
+STRUCT_EMBEDDING="rbf"  # gat / rbf
 EPOCHS=33
 
 # ---- Welcome...
@@ -50,12 +50,12 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=new_denoise_${ADIT_SIZE}_pdb_fixed_0_5 \
-    +model/gnn=$COORD_ENCODING \
+    +model/gnn=$STRUCT_EMBEDDING \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     trainer.min_epochs=$EPOCHS \
     trainer.max_epochs=$EPOCHS \
-    task_name=denoising_${ADIT_SIZE}_${COORD_ENCODING}_d$D_MAX \
+    task_name=denoising_${ADIT_SIZE}_${STRUCT_EMBEDDING} \
     logger=many_loggers \
-    ++logger.wandb.name=pretrain_${COORD_ENCODING}_d$D_MAX \
-    ++logger.wandb.id=pretrain_${COORD_ENCODING}_d$D_MAX_$SLURM_JOB_ID \
+    ++logger.wandb.name=pretrain_${STRUCT_EMBEDDING}_CB \
+    ++logger.wandb.id=pretrain_${STRUCT_EMBEDDING}_$SLURM_JOB_ID \
     ++logger.wandb.project="pretrain"
