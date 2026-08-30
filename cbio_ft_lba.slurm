@@ -2,13 +2,13 @@
 #SBATCH --job-name=lba
 #SBATCH --output=./logs/%x%a_%j.log    # x: job name , j: job ID, a: array task ID
 #SBATCH --error=./logs/%x%a_%j.err
-#SBATCH --array=30
+#SBATCH --array=30,60
 #SBATCH --mem=15G
 #SBATCH --time=10:00:00
 #SBATCH --partition=cbio-gpu
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:P100:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
+#SBATCH --ntasks-per-node=2
+#SBATCH --gres=gpu:P100:2               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
 #SBATCH --cpus-per-task=8
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
@@ -31,9 +31,12 @@ else    # IDENTITY=60
     EPOCHS=99
 fi  # cf article
 
-COORD_ENCODING="null"
+# COORD_ENCODING="null"
 # CKPT_PATH="ckpts/rbf/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"
-CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_032.ckpt"
+# CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_032.ckpt"
+
+STRUCT_EMBEDDING="gat"  # gat / rbf
+CKPT_PATH="ckpts/gat_S_CB.ckpt"
 
 # ---- Welcome...
 echo '-------------------------------------'
@@ -56,15 +59,14 @@ echo 'Launching script'
 
 python "$RUN_SCRIPT" \
     experiment=${DATA}_$SIZE \
-    test=true \
     data.dataset.split_identity_threshold=identity_$IDENTITY \
-    +data.drop_last=true \
+    +model/gnn=$STRUCT_EMBEDDING \
     task_name=${DATA}${IDENTITY}_${SIZE} \
     model.net.dropout=$DROPOUT \
     ckpt_path=$CKPT_PATH \
     trainer.max_epochs=$EPOCHS \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    logger.wandb.name=${DATA}${IDENTITY} \
+    logger.wandb.name=${DATA}${IDENTITY}_$STRUCT_EMBEDDING \
     logger.wandb.id=${DATA}${IDENTITY}_${SLURM_JOB_ID} \
     ++logger.wandb.project=$DATA

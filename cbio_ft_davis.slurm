@@ -18,10 +18,10 @@ RUN_SCRIPT="./adit/train.py"
 DATA="davis"
 SIZE="S"
 
-COORD_ENCODING="null"     # onehot , rbf , null
+STRUCT_EMBEDDING="gat"  # gat / rbf
+CKPT_PATH="ckpts/gat_S_CB.ckpt"
 
-CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
+# CKPT_PATH="ckpts/${COORD_ENCODING}/epoch_0${CKPT_EPOCH}.ckpt"
 # CKPT_PATH="outputs/2026-07-20/denoising_S_scale0_5_12-49-46/checkpoints/epoch_033.ckpt"
 
 # Protein - Ligand : "lba"
@@ -49,15 +49,12 @@ echo 'Launching script'
 
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_${SIZE} \
-    data.dataset.transform.truncate_length=300 \
-    task_name=${DATA}_${SIZE}_truncate300\
-    +model.net.token_coord_encoder=$COORD_ENCODING \
+    +model/gnn=$STRUCT_EMBEDDING \
     model.net.dropout=0.2 \
     ckpt_path=$CKPT_PATH \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
+    task_name=${DATA}_${SIZE}_$STRUCT_EMBEDDING\
     logger=many_loggers \
-    logger.wandb.name=${DATA}_truncate300_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    logger.wandb.id=${DATA}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    logger.wandb.name=${DATA}_$STRUCT_EMBEDDING \
+    logger.wandb.id=${DATA}_${STRUCT_EMBEDDING}_${SLURM_JOB_ID} \
     logger.wandb.project=$DATA
-
-        # ++model.net.d_max=$D_MAX \

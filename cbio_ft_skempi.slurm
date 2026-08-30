@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:A40:1               # A40 (48Go) , P100 (16Go, fastest), T4 (16Go, especially designed for inference), K80
-#SBATCH --cpus-per-task=4              # CPU cores per process (default 1, typically 4 or 5 - do not use more to let space for other people)
+#SBATCH --cpus-per-task=5              # CPU cores per process (default 1, typically 4 or 5 - do not use more to let space for other people)
 #SBATCH --mail-type=END                 # Send email at job completion
 #SBATCH --mail-user=sioban.nieradzik-kozic@etu.minesparis.psl.eu
 
@@ -19,12 +19,12 @@ RUN_SCRIPT="./adit/train.py"
 DATA="skempi"
 SPLIT="$SLURM_ARRAY_TASK_ID"
 
-COORD_ENCODING="rbf"     # onehot , rbf , null
-D_MAX=2.2
+STRUCT_EMBEDDING="gat"  # gat / rbf
+CKPT_PATH="ckpts/gat_S_CB.ckpt"
 
-CKPT_EPOCH=32 #$((SLURM_ARRAY_TASK_ID * 32))
-CKPT_PATH="ckpts/${COORD_ENCODING}/dist_max_22/epoch_0${CKPT_EPOCH}.ckpt"
+# CKPT_PATH="ckpts/${COORD_ENCODING}/dist_max_22/epoch_032.ckpt"
 # CKPT_PATH="outputs/2026-07-20/denoising_S_scale0_5_12-49-46/checkpoints/epoch_033.ckpt"
+
 
 # Protein - Ligand : "lba"
 # Drug - Target : "davis"
@@ -52,12 +52,11 @@ echo 'Launching script'
 srun python "$RUN_SCRIPT" \
     experiment=${DATA}_S \
     data.dataset.test_split=split_$SPLIT \
-    ++task_name=${DATA}${SPLIT}_S_${COORD_ENCODING}_epoch_$CKPT_EPOCH \
-    ++model.net.token_coord_encoder=$COORD_ENCODING \
-    ++model.net.relative_position_d_max=$D_MAX \
+    +model/gnn=$STRUCT_EMBEDDING \
+    task_name=${DATA}${SPLIT}_S_gat \
     ckpt_path=$CKPT_PATH \
     trainer.devices=$SLURM_NTASKS_PER_NODE \
     logger=many_loggers \
-    ++logger.wandb.name=${DATA}${SPLIT}_${COORD_ENCODING}_d${D_MAX}_epoch_$CKPT_EPOCH \
-    ++logger.wandb.id=${DATA}${SPLIT}_${COORD_ENCODING}_${SLURM_JOB_ID} \
+    ++logger.wandb.name=${DATA}${SPLIT}_gat \
+    ++logger.wandb.id=${DATA}${SPLIT}_${SLURM_JOB_ID} \
     ++logger.wandb.project=${DATA}
