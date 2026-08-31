@@ -1,44 +1,32 @@
-# ADiT
-This repo is based on the codebase of the paper **Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction**, *ICLR'2026*
+# Geom-ADiT
+
+Our project builds on the recent paper **Towards All-Atom Foundation Models for Biomolecular Binding Affinity Prediction**, *ICLR'2026*
 [[OpenReview](https://openreview.net/forum?id=o0Qfsq1fK8)].
+This paper introduces the Atom-level Diffusion Transformer (ADiT), a foundation model for protein structures pretrained on denoising. Despite its full transformer architecture, it managed to predict binding affinity with competitive results.
 
-The official original codebase can be found at [[GitHub](https://github.com/VectorShi/ADiT)].
+While ADiT encodes 3D geometry in input, its multi-scale attention mechanisms miss long-range dependencies between atoms or residues distant in sequence but close in structure due to molecule folding. 
+Indeed, the atom representation only links groups of 32 atoms with the surronding 128 atoms in sequence. At the token level, the pair representation is dense but does not explicitly contains geometric information.
 
-## Overview
-
-Binding affinity between biomolecules is a key indicator in the drug discovery process and other other molecular interactions. The Atom-level Diffusion Transformer (ADiT), a recent foundation model, managed to predict binding affinity with state-of-the-art or competitive results by jointly embedding sequence and structural information. While ADiT encodes 3D geometry in input, its multi-scale attention mechanisms miss long-range dependencies between atoms or residues distant in sequence but close in structure due to molecule folding. In this work, we complete ADiT with structural atom and residue distance representations, by adding light layers of embedding and geometric graph attention. We firstly added explicit geometric distance to the token-level conditioning, and then inserted graph attention layers within the main trunk consisting in a stack of atom and token-level Diffusion Transformers. The resulting upgraded model achieves better prediction results compared to the original ADiT, with neglectable additional parameters and training time.
-
-## Installation
-Refer to the original codebase to install the dependencies, checkpoints and datasets.
-
-## Changes upon the original codebase
-
-The following diagram is based on the figure 1 of the original ADiT paper.
-
-We added to ADiT the graph attention blocks (red).
-
-![ADiT](./asset/GAT.svg)
-
-
-
+In this work, we incorporate these long-range distance dependencies back into ADiT. The resulting upgraded model achieves better prediction results compared to the original ADiT, with neglectable additional parameters and training time. We aimed to make the lightest possible edits, and tried two strategies, described below.
 
 ### Structural distance embedding in token pair conditioning
 
-We firstly added structure information to the token-level pair conditioning, experimenting with RBF and onehot encoding. The RBF representation spans 0.2 nm to 2.2 nm with 64 bins.
+We first added structure information to the token-level pair conditioning, experimenting with RBF and onehot encoding. The RBF representation spans 0.2 nm to 2.2 nm with 64 bins.
 
 See the file `adit/models/net/adit/relative_position_encoder.py` where we concatenate the 3D distance representation to the original sequential distance embedding.
 
 ### Structural graph attention
 
-The second improvement consists in updating the single representations of atoms (res. tokens) based on the closest atoms
-(resp. tokens) in the 3D molecule structure, by adding message passing.
+The second improvement consists in adding message passing on distance-based graphs, at the atom and token levels. The graph attention blocks we added to ADiT are depicted in red in the following diagram. We follow the other conventions of the first figure of the original ADiT paper.
 
-Indeed, the pair and single conditioning representations are originally based on the sequence :
-the token pair representation is dense within each batch item, while the atom pair representation links groups of 32 atoms with the surronding 128 atoms in sequence.
+![ADiT](./asset/GAT.svg)
+
 Our message passing update considers a graph in which neighbourhood is determined on geometric distance rather than sequential.
-After trying Graph Convolution and Graph Attention (GAT) at different positions in ADiT main trunk, we retained Graph Attention inserted after each Diffusion Transformer block. An RBF embedding of the distances between neighbours is given to the GAT.
+For the token positions, we used the coordinates of the $C_\beta$ (or $C_\alpha$ in the case of glycine). 
+We defined the neighbours at atom-level by a maximum distance $d=0.5$ nm, and at token-level by $d=1$ nm. The edges are passed to GATv2Conv as an RBF embedding with 16 centers from 0 to $d$.
 
-While atom coordinates are provided in input of ADiT, we chose to compute residues coordinates as the $C_\beta$ coordinates (or $C_\alpha$ in the case of glycine).
+We used Graph Attention (GATv2) inserted after each Diffusion Transformer block. An RBF embedding of the distances between neighbours is given to the GAT. 
+We remind its deifining equations below.
 
 Let $\mathbf{x}$ the single representation of atoms (resp. tokens) in output of a Diffusion Transformer in ADiT main trunk. We update this representation $\mathbf{x}_i$ with the representations of the closest atoms to the atom (resp. token) $i$ and the embedding $\mathbf{e}$ of the distances between neighbours:
 
@@ -60,14 +48,16 @@ $$
 
 where $W_s, W_t, W_e$ are learnable coefficients.
 
-
-We defined the neighbours at atom-level by a maximum distance $d=0.5$ nm, and at token-level by $d=1$ nm. The edges are passed to GATv2Conv as an RBF embedding with 16 centers from 0 to $d$.
-
 See the file `adit/models/net/adit/token_graph.py` for these additional layers and `adit/models/net/adit/utils.py` for the implementation of token coordinates and distance-based edges.
 
 
 ## Results
 
+## Installation
+
+This repo is based on the codebase of the original paper, found [[here](https://github.com/VectorShi/ADiT)].
+
+Please refer to this codebase to install the dependencies, checkpoints and datasets.
 
 ## Reproduction
 
