@@ -7,7 +7,7 @@ This paper introduces the Atom-level Diffusion Transformer (ADiT), a foundation 
 While ADiT encodes 3D geometry in input, its multi-scale attention mechanisms miss long-range dependencies between atoms or residues distant in sequence but close in structure due to molecule folding. 
 Indeed, the atom representation only links groups of 32 atoms with the surrounding 128 atoms in sequence. At the token level, the pair representation is dense but does not explicitly contains geometric information.
 
-In this work, we incorporate these long-range distance dependencies back into ADiT. The resulting upgraded model achieves better prediction results compared to the original ADiT, with negligible additional parameters and training time. We aimed to make the lightest possible edits, and tried two strategies, described below.
+In this work, we incorporate these long-range distance dependencies back into ADiT. GAT improves protein-protein prediction but does not help on drug-target and protein-ligand tasks. We aimed to make the lightest possible edits, and tried two strategies, described below.
 
 ### Structural distance embedding in token pair conditioning
 
