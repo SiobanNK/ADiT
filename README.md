@@ -53,7 +53,7 @@ See the file `adit/models/net/adit/token_graph.py` for these additional layers a
 
 ## Results
 
-Best result per column in bold.
+GAT improves protein-protein prediction but does not help on drug-target and protein-ligand tasks.
 
 ### Protein-protein binding affinity (Skempiv2 dataset)
 
