@@ -53,6 +53,40 @@ See the file `adit/models/net/adit/token_graph.py` for these additional layers a
 
 ## Results
 
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{lcccc ccc}
+    \toprule
+    & \multicolumn{4}{c}{\textbf{Protein-Protein}} & \multicolumn{3}{c}{\textbf{Drug-target}} \\
+    \cmidrule(lr){2-5} \cmidrule(lr){6-8}
+    Model         & Pearson $\uparrow$  & Spearman $\uparrow$   & RMSE $\downarrow$ & MAE $\downarrow$  & MSE $\downarrow$  & $r_m^2$ $\uparrow$\\
+    \midrule
+    ADiT-S        & 0.660               & 0.524                 & 1.597             & 1.132             & 0.252             & \textbf{0.690}        \\
+    ADiT-S + Cond.  & 0.672              & 0.530                & 1.583            & 1.107            & \textbf{0.251}   & 0.685             \\
+    ADiT-S + GAT  & \textbf{0.674}     & \textbf{0.538}       & \textbf{1.574}   & \textbf{1.095}   & 0.311            & 0.610        \\
+    \bottomrule
+  \end{tabular}
+  \caption{Results for drug-target and protein-protein binding affinity prediction. The best result is in bold.}
+  \label{tab:skempi_davis}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{lccc ccc}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{Sequence Identity 30\%}} & \multicolumn{3}{c}{\textbf{Sequence Identity 60\%}} \\
+    \cmidrule(lr){2-4} \cmidrule(lr){5-7}
+    Model         & Pearson $\uparrow$  & Spearman $\uparrow$   & RMSE $\downarrow$ & Pearson $\uparrow$    & Spearman $\uparrow$   & RMSE $\downarrow$  \\
+    \midrule
+    ADiT-S        & \textbf{0.626}      & \textbf{0.618}        & \textbf{1.337}    & \textbf{0.740}        & \textbf{0.740}        & \textbf{1.413}  \\
+    ADiT-S + Cond.  & 0.605              & 0.603                & 1.416            & 0.715                & 0.711                & 1.450 \\
+    ADiT-S + GAT  & 0.605              & 0.616                & 1.390            & 0.735                & 0.728                & 1.418 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Results for protein-ligand binding affinity prediction. The best result is in bold.}
+  \label{tab:lba}
+\end{table}
+
 ## Installation
 
 This repo is based on the codebase of the original paper, found [[here](https://github.com/VectorShi/ADiT)].
