@@ -5,9 +5,9 @@ Our project builds on the recent paper **Towards All-Atom Foundation Models for 
 This paper introduces the Atom-level Diffusion Transformer (ADiT), a foundation model for protein structures pretrained on denoising. Despite its full transformer architecture, it managed to predict binding affinity with competitive results.
 
 While ADiT encodes 3D geometry in input, its multi-scale attention mechanisms miss long-range dependencies between atoms or residues distant in sequence but close in structure due to molecule folding. 
-Indeed, the atom representation only links groups of 32 atoms with the surronding 128 atoms in sequence. At the token level, the pair representation is dense but does not explicitly contains geometric information.
+Indeed, the atom representation only links groups of 32 atoms with the surrounding 128 atoms in sequence. At the token level, the pair representation is dense but does not explicitly contains geometric information.
 
-In this work, we incorporate these long-range distance dependencies back into ADiT. The resulting upgraded model achieves better prediction results compared to the original ADiT, with neglectable additional parameters and training time. We aimed to make the lightest possible edits, and tried two strategies, described below.
+In this work, we incorporate these long-range distance dependencies back into ADiT. The resulting upgraded model achieves better prediction results compared to the original ADiT, with negligible additional parameters and training time. We aimed to make the lightest possible edits, and tried two strategies, described below.
 
 ### Structural distance embedding in token pair conditioning
 
@@ -26,7 +26,7 @@ For the token positions, we used the coordinates of the $C_\beta$ (or $C_\alpha$
 We defined the neighbours at atom-level by a maximum distance $d=0.5$ nm, and at token-level by $d=1$ nm. The edges are passed to GATv2Conv as an RBF embedding with 16 centers from 0 to $d$.
 
 We used Graph Attention (GATv2) inserted after each Diffusion Transformer block. An RBF embedding of the distances between neighbours is given to the GAT. 
-We remind its deifining equations below.
+We remind its defining equations below.
 
 Let $\mathbf{x}$ the single representation of atoms (resp. tokens) in output of a Diffusion Transformer in ADiT main trunk. We update this representation $\mathbf{x}_i$ with the representations of the closest atoms to the atom (resp. token) $i$ and the embedding $\mathbf{e}$ of the distances between neighbours:
 
@@ -53,39 +53,41 @@ See the file `adit/models/net/adit/token_graph.py` for these additional layers a
 
 ## Results
 
-\begin{table}[htbp]
-  \centering
-  \begin{tabular}{lcccc ccc}
-    \toprule
-    & \multicolumn{4}{c}{\textbf{Protein-Protein}} & \multicolumn{3}{c}{\textbf{Drug-target}} \\
-    \cmidrule(lr){2-5} \cmidrule(lr){6-8}
-    Model         & Pearson $\uparrow$  & Spearman $\uparrow$   & RMSE $\downarrow$ & MAE $\downarrow$  & MSE $\downarrow$  & $r_m^2$ $\uparrow$\\
-    \midrule
-    ADiT-S        & 0.660               & 0.524                 & 1.597             & 1.132             & 0.252             & \textbf{0.690}        \\
-    ADiT-S + Cond.  & 0.672              & 0.530                & 1.583            & 1.107            & \textbf{0.251}   & 0.685             \\
-    ADiT-S + GAT  & \textbf{0.674}     & \textbf{0.538}       & \textbf{1.574}   & \textbf{1.095}   & 0.311            & 0.610        \\
-    \bottomrule
-  \end{tabular}
-  \caption{Results for drug-target and protein-protein binding affinity prediction. The best result is in bold.}
-  \label{tab:skempi_davis}
-\end{table}
+Best result per column in bold.
 
-\begin{table}[htbp]
-  \centering
-  \begin{tabular}{lccc ccc}
-    \toprule
-    & \multicolumn{3}{c}{\textbf{Sequence Identity 30\%}} & \multicolumn{3}{c}{\textbf{Sequence Identity 60\%}} \\
-    \cmidrule(lr){2-4} \cmidrule(lr){5-7}
-    Model         & Pearson $\uparrow$  & Spearman $\uparrow$   & RMSE $\downarrow$ & Pearson $\uparrow$    & Spearman $\uparrow$   & RMSE $\downarrow$  \\
-    \midrule
-    ADiT-S        & \textbf{0.626}      & \textbf{0.618}        & \textbf{1.337}    & \textbf{0.740}        & \textbf{0.740}        & \textbf{1.413}  \\
-    ADiT-S + Cond.  & 0.605              & 0.603                & 1.416            & 0.715                & 0.711                & 1.450 \\
-    ADiT-S + GAT  & 0.605              & 0.616                & 1.390            & 0.735                & 0.728                & 1.418 \\
-    \bottomrule
-  \end{tabular}
-  \caption{Results for protein-ligand binding affinity prediction. The best result is in bold.}
-  \label{tab:lba}
-\end{table}
+### Protein-protein binding affinity (Skempiv2 dataset)
+
+| Model | Pearson ↑ | Spearman ↑ | RMSE ↓ | MAE ↓ |
+|---|---|---|---|---|
+| ADiT-S | 0.660 | 0.524 | 1.597 | 1.132 |
+| ADiT-S + Cond. | 0.672 | 0.530 | 1.583 | 1.107 |
+| ADiT-S + GAT | **0.674** | **0.538** | **1.574** | **1.095** |
+
+### Drug-target binding affinity (Davis dataset)
+
+| Model | MSE ↓ | $r_m^2$ ↑ |
+|---|---|---|
+| ADiT-S | 0.252 | **0.690** |
+| ADiT-S + Cond. | **0.251** | 0.685 |
+| ADiT-S + GAT | 0.311 | 0.610 |
+
+### Protein-ligand binding affinity (LBA dataset)
+
+**Sequence identity 30%**
+
+| Model | Pearson ↑ | Spearman ↑ | RMSE ↓ |
+|---|---|---|---|
+| ADiT-S | **0.626** | **0.618** | **1.337** |
+| ADiT-S + Cond. | 0.605 | 0.603 | 1.416 |
+| ADiT-S + GAT | 0.605 | 0.616 | 1.390 |
+
+**Sequence identity 60%**
+
+| Model | Pearson ↑ | Spearman ↑ | RMSE ↓ |
+|---|---|---|---|
+| ADiT-S | **0.740** | **0.740** | **1.413** |
+| ADiT-S + Cond. | 0.715 | 0.711 | 1.450 |
+| ADiT-S + GAT | 0.735 | 0.728 | 1.418 |
 
 ## Installation
 
@@ -127,7 +129,7 @@ You can modify the neighbouring radius (in nm), the type of graph update layer a
 - Velickovic, Cucurull, Casanova, Romero, Lio, Bengio. Graph attention networks. ICLR, 2018
 - Gilmer, Schoenholz, Riley, Vinyals, Dahl. Neural message passing for quantum chemistry. ICML, 2017
 - Thomas Kipf & Max Welling. Semi-supervised classification with graph convolutional networks. ICLR, 2016
-- MKearnes, S., McCloskey, K., Berndl, M. et al. Molecular graph convolutions: moving beyond fingerprints. J Comput Aided Mol Des 30, 595–608, 2016
+- Kearnes, S., McCloskey, K., Berndl, M. et al. Molecular graph convolutions: moving beyond fingerprints. J Comput Aided Mol Des 30, 595–608, 2016
 - Robin Pearce & Yang Zhang. Deep learning techniques have significantly impacted protein structure prediction and protein design. Current opinion in structural biology, 2021
 - Zhang, Xu, Chenthamarakshan, Lozano, Das, Tang. Enhancing  protein language models with structure based encoder and pre-training. ICLR MLDD Workshop, 2023
 - Brody, Alon, Yahav. How attentive are graph attention networks? ICLR, 2022
